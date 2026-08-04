@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>AR金魚すくい</title>
+    <!-- A-Frame と MindAR のライブラリ読み込み -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+      #ui-overlay {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 999;
+        font-family: sans-serif;
+        color: white;
+        background: rgba(0, 0, 0, 0.6);
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- UI表示（すくった数のカウント） -->
+    <div id="ui-overlay">
+      すくった数: <span id="score">0</span> 匹
+    </div>
+
+    <!-- ARシーン定義 -->
+    <a-scene 
+      mindar-image="imageTargetSrc: ./targets.mind;" 
+      color-space="sRGB" 
+      renderer="colorManagement: true, physicallyCorrectLights" 
+      vr-mode-ui="enabled: false" 
+      device-orientation-permission-ui="enabled: false">
+
+      <a-assets>
+        <!-- 3Dモデルがない場合は簡易球体や円錐でテスト可能 -->
+      </a-assets>
+
+      <!-- タップ判定（Raycaster）を有効にするカメラ設定 -->
+      <a-camera position="0 0 0" look-controls="enabled: false" raycaster="objects: .clickable" cursor="rayOrigin: mouse"></a-camera>
+
+      <!-- マーカー認識時のターゲット -->
+      <a-entity mindar-image-target="targetIndex: 0">
+        <!-- 金魚（初期テスト用に赤い球体で代用、後で3Dモデルに変更可能） -->
+        <a-sphere 
+          id="goldfish" 
+          class="clickable" 
+          color="red" 
+          radius="0.1" 
+          position="0 0 0" 
+          animation="property: position; to: 0.3 0 0.2; dir: alternate; dur: 2000; loop: true; easing: easeInOutSine">
+        </a-sphere>
+      </a-entity>
+    </a-scene>
+
+    <script>
+      let score = 0;
+      const scoreEl = document.getElementById('score');
+      const goldfish = document.getElementById('goldfish');
+
+      // 金魚をタップしたときのイベント処理
+      goldfish.addEventListener('click', function () {
+        // 簡易的な確率判定（例: 70%の確率で成功）
+        const isSuccess = Math.random() < 0.7;
+
+        if (isSuccess) {
+          score++;
+          scoreEl.textContent = score;
+
+          // 金魚を別の場所にランダム移動（捕獲演出の代わり）
+          const newX = (Math.random() - 0.5) * 0.6;
+          const newZ = (Math.random() - 0.5) * 0.6;
+          goldfish.setAttribute('position', `${newX} 0 ${newZ}`);
+          alert('ゲット！');
+        } else {
+          alert('あ〜！ポイが破れちゃった！');
+        }
+      });
+    </script>
+  </body>
+</html>
