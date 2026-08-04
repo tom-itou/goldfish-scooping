@@ -38,6 +38,7 @@
       <a-assets>
         <!-- a-asset-item id="tosakin_goldfish-model" src="./tosakin_goldfish.glb"></a-asset-item -->
         <a-asset-item id="goldfish_crucian_carp-model" src="./goldfish_crucian_carp.glb"></a-asset-item>
+        <a-asset-item id="goldfish-model" src="./goldfish.glb"></a-asset-item>
       </a-assets>
 
       <!-- タップ判定（Raycaster）を有効にするカメラ設定 -->
@@ -47,11 +48,22 @@
       <a-entity mindar-image-target="targetIndex: 0">
         <!-- 3Dモデルの配置（scaleで大きさを、animation-mixerでアニメーション再生を調整） -->
         <a-gltf-model 
-          id="goldfish"
+          id="goldfish0"
           class="clickable"
           src="#goldfish_crucian_carp-model" 
-          position="0 0 0" 
-          scale="0.2 0.2 0.2"
+          position="-0.3 0 0" 
+          animation="property: position; to: 0.3 0 0.1; dir: alternate; dur: 3000; loop: true; easing: easeInOutSine"
+          scale="0.1 0.1 0.1"
+          rotation="90 0 0">
+        </a-gltf-model>
+
+        <a-gltf-model 
+          id="goldfish1"
+          class="clickable"
+          src="#goldfish-model" 
+          position="0.2 0.1 -0.2"
+          animation="property: position; to: -0.2 -0.1 0.2; dir: alternate; dur: 2000; loop: true; easing: easeInOutQuad"
+          scale="0.1 0.1 0.1"
           rotation="90 0 0">
         </a-gltf-model>
       </a-entity>
