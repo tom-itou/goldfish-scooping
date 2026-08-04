@@ -36,7 +36,7 @@
       device-orientation-permission-ui="enabled: false">
 
       <a-assets>
-        <!-- 3Dモデルがない場合は簡易球体や円錐でテスト可能 -->
+        <a-asset-item id="tosakin_goldfish-model" src="./tosakin_goldfish.glb"></a-asset-item>
       </a-assets>
 
       <!-- タップ判定（Raycaster）を有効にするカメラ設定 -->
@@ -44,15 +44,15 @@
 
       <!-- マーカー認識時のターゲット -->
       <a-entity mindar-image-target="targetIndex: 0">
-        <!-- 金魚（初期テスト用に赤い球体で代用、後で3Dモデルに変更可能） -->
-        <a-sphere 
-          id="goldfish" 
-          class="clickable" 
-          color="red" 
-          radius="0.1" 
+        <!-- 3Dモデルの配置（scaleで大きさを、animation-mixerでアニメーション再生を調整） -->
+        <a-gltf-model 
+          id="goldfish"
+          class="clickable"
+          src="#tosakin_goldfish-model" 
           position="0 0 0" 
-          animation="property: position; to: 0.3 0 0.2; dir: alternate; dur: 2000; loop: true; easing: easeInOutSine">
-        </a-sphere>
+          scale="0.1 0.1 0.1"
+          animation-mixer> <!-- モデル内に泳ぐアニメーションが含まれている場合これで再生されます -->
+        </a-gltf-model>
       </a-entity>
     </a-scene>
 
