@@ -36,7 +36,8 @@
       device-orientation-permission-ui="enabled: false">
 
       <a-assets>
-        <a-asset-item id="tosakin_goldfish-model" src="./tosakin_goldfish.glb"></a-asset-item>
+        <!-- a-asset-item id="tosakin_goldfish-model" src="./tosakin_goldfish.glb"></a-asset-item -->
+        <a-asset-item id="goldfish_crucian_carp-model" src="./goldfish_crucian_carp.glb"></a-asset-item>
       </a-assets>
 
       <!-- タップ判定（Raycaster）を有効にするカメラ設定 -->
@@ -48,11 +49,10 @@
         <a-gltf-model 
           id="goldfish"
           class="clickable"
-          src="#tosakin_goldfish-model" 
+          src="#goldfish_crucian_carp-model" 
           position="0 0 0" 
           scale="0.02 0.02 0.02"
-          rotation="90 0 0"
-          animation-mixer="timeScale: 0.25"> <!-- モデル内に泳ぐアニメーションが含まれている場合これで再生されます -->
+          rotation="90 0 0">
         </a-gltf-model>
       </a-entity>
     </a-scene>
