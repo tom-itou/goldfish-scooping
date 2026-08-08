@@ -113,7 +113,7 @@
       const DURABILITY_COST = 10;   // 1タップごとの消費耐久度
       const CATCH_RADIUS = 0.25;    // ポイですくえる範囲（半径）
       const MODELS = ['#fish-model-1', '#fish-model-2'];
-      const SCALES = ['0.1 0.1 0.1', '0.01 0.01 0.01'];
+      const SCALES = ['0.2 0.2 0.2', '0.001 0.001 0.001'];
 
       // 速度・点数の3段階定義
       const SPEED_TYPES = [
@@ -254,6 +254,7 @@
         fish.setAttribute('class', 'clickable goldfish-entity');
         fish.setAttribute('position', `${initialPos.x} ${initialPos.y} ${initialPos.z}`);
         fish.setAttribute('scale', SCALES[no]);
+        fish.setAttribute('rotation', '90 0 0');
         fish.setAttribute('data-score', speedConfig.score); // スコア値をデータ保持
         
         // アニメーション速度設定
