@@ -265,10 +265,11 @@
 
         // 子エンティティ：3Dモデル自体（姿勢補正：背中をカメラ／上に向ける）
         const fishModel = document.createElement('a-entity');
-        const randomModel = MODELS[Math.floor(Math.random() * MODELS.length)];
+        const number = Math.floor(Math.random() * MODELS.length);
+        const randomModel = MODELS[number];
 
         fishModel.setAttribute('gltf-model', randomModel);
-        fishModel.setAttribute('scale', '0.08 0.08 0.08');
+        fishModel.setAttribute('scale', SCALES[number]);
         
         // 3Dモデルの背中を真上に向け、頭を上方向にセットする補正回転
         // ※モデルの初期姿勢に応じて '90 0 0' の数値を微調整できます
