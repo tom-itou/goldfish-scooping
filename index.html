@@ -220,25 +220,50 @@
       }
 
       // 金魚のランダム周遊
-      function animateFish(fishEntity, speedFactor) {
-        if (isGameOver || !fishEntity.parentElement) return;
+function animateFish(fishEntity, speedFactor) {
+  if (isGameOver || !fishEntity.parentElement) return;
 
-        const nextPos = getRandomPosition();
-        const duration = (Math.random() * 2500 + 1500) / speedFactor;
+  // 現在の座標を取得
+  const currentPos = fishEntity.getAttribute('position') || { x: 0, y: 0, z: 0 };
+  // 次の目的地の座標を生成
+  const nextPos = getRandomPosition();
 
-        fishEntity.setAttribute('animation', {
-          property: 'position',
-          to: `${nextPos.x} ${nextPos.y} ${nextPos.z}`,
-          dur: duration,
-          easing: 'easeInOutQuad'
-        });
+  // 移動ベクトル（差分）の計算
+  const dx = nextPos.x - currentPos.x;
+  const dz = nextPos.z - currentPos.z;
 
-        fishEntity.addEventListener('animationcomplete', function onAnimComplete() {
-          fishEntity.removeEventListener('animationcomplete', onAnimComplete);
-          animateFish(fishEntity, speedFactor);
-        });
-      }
+  // 進行方向の角度（Y軸の回転角度：度数法）を計算
+  let angleY = Math.atan2(dx, dz) * (180 / Math.PI);
 
+  // 【補足】3Dモデルのデフォルトの向きが逆・横向きの場合は、以下のコメントアウトを外して微調整してください
+  // angleY += 180; // 逆向き（お尻を向けて泳ぐ）場合
+  // angleY += 90;  // 横向きの場合
+
+  // 移動にかかる時間の計算
+  const duration = (Math.random() * 2500 + 1500) / speedFactor;
+
+  // 1. まず進行方向へ頭を向ける（0.3秒で回転）
+  fishEntity.setAttribute('animation__rotate', {
+    property: 'rotation',
+    to: `90 ${angleY} 0`,
+    dur: 300,
+    easing: 'easeOutQuad'
+  });
+
+  // 2. 目的地の座標へ移動させる
+  fishEntity.setAttribute('animation__move', {
+    property: 'position',
+    to: `${nextPos.x} ${nextPos.y} ${nextPos.z}`,
+    dur: duration,
+    easing: 'easeInOutQuad'
+  });
+
+  // 移動が完了したら、次の目的地を設定して繰り返す
+  fishEntity.addEventListener('animationcomplete__move', function onAnimComplete() {
+    fishEntity.removeEventListener('animationcomplete__move', onAnimComplete);
+    animateFish(fishEntity, speedFactor);
+  });
+}
       // 金魚の生成
       function spawnFish() {
         if (isGameOver) return;
