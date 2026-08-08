@@ -113,6 +113,7 @@
       const DURABILITY_COST = 10;   // 1タップごとの消費耐久度
       const CATCH_RADIUS = 0.25;    // ポイですくえる範囲（半径）
       const MODELS = ['#fish-model-1', '#fish-model-2'];
+      const SCALES = ['0.01 0.01 0.01', '0.1 0.1 0.1'];
 
       // 速度・点数の3段階定義
       const SPEED_TYPES = [
@@ -243,7 +244,8 @@
         if (isGameOver) return;
 
         const fish = document.createElement('a-entity');
-        const randomModel = MODELS[Math.floor(Math.random() * MODELS.length)];
+        const no = Math.floor(Math.random() * MODELS.length);
+        const randomModel = MODELS[no];
         const initialPos = getRandomPosition();
         const speedConfig = getRandomSpeedType();
 
@@ -251,7 +253,7 @@
         fish.setAttribute('gltf-model', randomModel);
         fish.setAttribute('class', 'clickable goldfish-entity');
         fish.setAttribute('position', `${initialPos.x} ${initialPos.y} ${initialPos.z}`);
-        fish.setAttribute('scale', '0.08 0.08 0.08');
+        fish.setAttribute('scale', SCALES[no]);
         fish.setAttribute('data-score', speedConfig.score); // スコア値をデータ保持
         
         // アニメーション速度設定
