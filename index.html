@@ -106,13 +106,11 @@
 
     <script>
       // 定数設定
-      const MAX_FISH_COUNT = 5;      // 最大金魚数
+      const MAX_FISH_COUNT = 10;     // 最大金魚数
       const INITIAL_DURABILITY = 100;// 初期耐久度
       const DURABILITY_COST = 10;   // 1タップごとの消費耐久度
       const CATCH_RADIUS = 0.25;    // ポイですくえる半径
       const MODELS = ['#fish-model-1', '#fish-model-2'];
-      const SCALES = ['0.2 0.2 0.2', '0.001 0.001 0.001'];
-
 
       // 速度・点数の3段階定義
       const SPEED_TYPES = [
@@ -265,11 +263,10 @@
 
         // 子エンティティ：3Dモデル自体（姿勢補正：背中をカメラ／上に向ける）
         const fishModel = document.createElement('a-entity');
-        const number = Math.floor(Math.random() * MODELS.length);
-        const randomModel = MODELS[number];
+        const randomModel = MODELS[Math.floor(Math.random() * MODELS.length)];
 
         fishModel.setAttribute('gltf-model', randomModel);
-        fishModel.setAttribute('scale', SCALES[number]);
+        fishModel.setAttribute('scale', '0.08 0.08 0.08');
         
         // 3Dモデルの背中を真上に向け、頭を上方向にセットする補正回転
         // ※モデルの初期姿勢に応じて '90 0 0' の数値を微調整できます
