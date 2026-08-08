@@ -140,8 +140,7 @@
         modelEl.setAttribute('scale', '0.001 0.001 0.001');
       }
 
-      // 【修正箇所】コメントアウトを解除して有効化
-      // モデルをX軸90度回転させ、マーカー平面に対して水平に寝かせます
+      // モデルをX軸90度回転させて水平に寝かせる
       modelEl.setAttribute('rotation', '90 0 0');
 
       // 構造の構築: mover (位置) -> rotator (進行方向) -> model (水平化)
@@ -193,15 +192,15 @@
           fish.posX += (dx / dist) * fish.speed;
           fish.posY += (dy / dist) * fish.speed;
 
-          // 進行方向の計算（Y軸正の方向を0度とした角度）
+          // 進行方向の計算
           const angleRad = Math.atan2(dx, dy);
           const angleDeg = angleRad * (180 / Math.PI);
 
           // 位置の更新（親: mover）
           fish.mover.setAttribute('position', `${fish.posX} ${fish.posY} 0.01`);
           
-          // 向きの更新（中間: rotator）
-          fish.rotator.setAttribute('rotation', `0 0 ${-angleDeg}`);
+          // 【修正箇所】+180度オフセットを追加して前向きに進行させます
+          fish.rotator.setAttribute('rotation', `0 0 ${-angleDeg + 180}`);
         }
       });
 
@@ -226,7 +225,7 @@
           score += fish.scoreValue;
           caughtCount++;
 
-          fish.mover.remove(); // 親エンティティごと削除
+          fish.mover.remove(); // 親エンティtyごと削除
           fishes.splice(i, 1);
           spawnFish(); // 補充
         }
