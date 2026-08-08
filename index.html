@@ -237,7 +237,7 @@ function animateFish(fishEntity, speedFactor) {
 
   // 【補足】3Dモデルのデフォルトの向きが逆・横向きの場合は、以下のコメントアウトを外して微調整してください
   // angleY += 180; // 逆向き（お尻を向けて泳ぐ）場合
-  // angleY += 90;  // 横向きの場合
+   angleY += 90;  // 横向きの場合
 
   // 移動にかかる時間の計算
   const duration = (Math.random() * 2500 + 1500) / speedFactor;
@@ -245,7 +245,7 @@ function animateFish(fishEntity, speedFactor) {
   // 1. まず進行方向へ頭を向ける（0.3秒で回転）
   fishEntity.setAttribute('animation__rotate', {
     property: 'rotation',
-    to: `90 ${angleY} 0`,
+    to: `0 ${angleY} 0`,
     dur: 300,
     easing: 'easeOutQuad'
   });
