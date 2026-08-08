@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR金魚すくい（向き修正版）</title>
+  <title>AR金魚すくい（表示修正版）</title>
   <!-- A-Frame & MindAR Libraries -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
@@ -52,10 +52,14 @@
 
     <!-- AR Target Container -->
     <a-entity id="example-target" mindar-image-target="targetIndex: 0">
-      <!-- 判定用の透明な平面 -->
-      <a-plane id="pond" class="clickable" position="0 0 0" rotation="0 0 0" width="2" height="2" material="opacity: 0; transparent: true"></a-plane>
+      <!-- 
+        【修正ポイント1】判定用の透明な平面。
+        MindARではデフォルトで手前（Z軸正）を向くため、rotationは0 0 0でOK。
+        width/heightはターゲットの物理サイズに合わせて調整してください（ここでは仮に1とする）。
+      -->
+      <a-plane id="pond" class="clickable" position="0 0 0" rotation="0 0 0" width="1" height="1" material="opacity: 0; transparent: true"></a-plane>
       
-      <!-- 金魚を保持するコンテナ（ここにJSで追加していく） -->
+      <!-- 金魚を保持するコンテナ -->
       <a-entity id="fish-container"></a-entity>
     </a-entity>
 
@@ -66,9 +70,10 @@
   <script>
     // --- ゲーム設定と状態 ---
     const MAX_FISH = 8;
-    const CATCH_RADIUS = 0.35; // AR座標空間内の距離
+    const CATCH_RADIUS = 0.2; // マーカーサイズ（1とする）に対する掬える範囲
     const DURABILITY_DECREASE = 10;
-    const BOUNDS = 0.8; // 行動範囲
+    // 【修正ポイント2】行動範囲。ターゲットエンティティのサイズ（0.5 = ターゲットの端）に合わせる
+    const BOUNDS = 0.45; 
 
     let score = 0;
     let caughtCount = 0;
@@ -77,9 +82,9 @@
     let fishes = [];
 
     const SPEED_TYPES = {
-      SLOW:   { speed: 0.003, score: 100 },
-      NORMAL: { speed: 0.007, score: 300 },
-      FAST:   { speed: 0.012, score: 500 }
+      SLOW:   { speed: 0.002, score: 100 }, // サイズ感に合わせて少し遅く設定
+      NORMAL: { speed: 0.005, score: 300 },
+      FAST:   { speed: 0.009, score: 500 }
     };
 
     const pond = document.getElementById('pond');
@@ -122,11 +127,13 @@
     function spawnFish() {
       if (fishes.length >= MAX_FISH) return;
 
-      // 【修正ポイント1】入れ子構造にする
-      // 動き(位置/進行方向Y軸回転)を制御する親エンティティ
+      // 移動(位置)を制御する親エンティティ
       const moverEl = document.createElement('a-entity');
       
-      // モデル自体(水平に寝かせるX軸回転)を持つ子エンティティ
+      // 向き(進行方向回転)を制御する中間のエンティティ
+      const rotatorEl = document.createElement('a-entity');
+
+      // モデル自体を持ち、初期の向きを修正する子エンティティ
       const modelEl = document.createElement('a-entity');
       
       const isTypeA = Math.random() < 0.5;
@@ -138,14 +145,22 @@
         modelEl.setAttribute('scale', '0.001 0.001 0.001');
       }
 
-      // 【修正ポイント2】子エンティティでモデルを水平に寝かせる
-      // これにより、親エンティティがどう回転しても、金魚は常に平面に対して水平を保ちます
-      modelEl.setAttribute('rotation', '90 0 0');
+      // 【修正ポイント3】初期の向き修正（入れ子構造の最下層）
+      // モデルがカメラ（Z負）を向いている場合、マーカー平面（XY）に寝かせ、
+      // かつ回転の基準（0度）が上（Y正）を向くように調整する。
+      // glbモデルの初期向き依存だが、一般的な「X+90, Y=0, Z=0」で寝かせる設定を試す。
+      // もしこれで下を向くなら、モデル自体が最初から寝ている可能性がある。
+      // modelEl.setAttribute('rotation', '90 0 0'); // 一般的な修正
 
-      // 親に子を追加
-      moverEl.appendChild(modelEl);
+      // 【修正ポイント3-B】もし前回の「下を向く」が「垂直に突き刺さる」意味だった場合：
+      // 前回の「寝かせるX回転」は外して、JSのtick側で回転軸を制御するアプローチに変更。
+      // ここではrotationを設定せず、rotatorElで制御する。
 
-      // 初期位置の設定（XY平面上、Zはわずかに浮かせる）
+      // 入れ子にする: mover(位置) -> rotator(進行方向) -> model(glb)
+      rotatorEl.appendChild(modelEl);
+      moverEl.appendChild(rotatorEl);
+
+      // 初期位置の設定（マーカー上のXY平面、Zはカメラ側にわずかに浮かせる）
       const x = (Math.random() - 0.5) * BOUNDS * 2;
       const y = (Math.random() - 0.5) * BOUNDS * 2;
       moverEl.setAttribute('position', `${x} ${y} 0.01`);
@@ -158,7 +173,8 @@
       let speedConfig = rand < 0.4 ? SPEED_TYPES.SLOW : (rand < 0.8 ? SPEED_TYPES.NORMAL : SPEED_TYPES.FAST);
 
       const fishData = {
-        element: moverEl, // 位置制御は親の方
+        mover: moverEl,
+        rotator: rotatorEl, // 回転制御用に追加
         speed: speedConfig.speed,
         scoreValue: speedConfig.score,
         posX: x,
@@ -178,11 +194,12 @@
       }
 
       fishes.forEach(fish => {
+        // ベクトル計算（XY平面上）
         const dx = fish.targetX - fish.posX;
         const dy = fish.targetY - fish.posY;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist < 0.05) {
+        if (dist < 0.02) {
           fish.targetX = (Math.random() - 0.5) * BOUNDS * 2;
           fish.targetY = (Math.random() - 0.5) * BOUNDS * 2;
         } else {
@@ -190,15 +207,20 @@
           fish.posX += (dx / dist) * fish.speed;
           fish.posY += (dy / dist) * fish.speed;
 
-          // 【修正ポイント3】進行方向の計算（Y軸回転）
-          // atan2(dx, dy) で、Y軸正の方向を0度とした角度（ラジアン）を取得
+          // 【修正ポイント4】回転制御（XY平面での移動）
+          // atan2(dx, dy) で、Y軸正の方向（上）を0度とした角度（ラジアン）を取得
           const angleRad = Math.atan2(dx, dy);
           const angleDeg = angleRad * (180 / Math.PI);
 
-          // 位置と回転（向き）の更新
-          // 親エンティティ(moverEl)は、X回転は0のまま、Y軸（進行方向）だけ回転させる
-          fish.element.setAttribute('position', `${fish.posX} ${fish.posY} 0.01`);
-          fish.element.setAttribute('rotation', `0 ${angleDeg} 0`);
+          // 位置の更新（親: mover）
+          fish.mover.setAttribute('position', `${fish.posX} ${fish.posY} 0.01`);
+          
+          // 向きの更新（中間: rotator）
+          // マーカー平面（XY）で動かすため、回転させるのは「Z軸」
+          // (A-FrameのEuler角の順序依存だが、ここではZ軸回転のみ適用)
+          fish.rotator.setAttribute('rotation', `0 0 ${-angleDeg}`);
+          // モデル自体に rotation="90 0 0"（寝かせる）がかかっていると、
+          // ここのZ回転が予期せぬ方向になるため、モデルのrotationは0 0 0にしておくのが無難。
         }
       });
 
@@ -211,22 +233,24 @@
       const intersection = event.detail.intersection;
       if (!intersection) return;
 
+      // pond（a-plane）のローカル座標系でのタップ位置
       const tapX = intersection.point.x;
       const tapY = intersection.point.y;
 
-      let caughtInThisTap = false;
+      let caughtCountInThisTap = 0;
 
       // 範囲内の金魚を一括で掬う
       for (let i = fishes.length - 1; i >= 0; i--) {
         const fish = fishes[i];
+        // XY平面上の距離
         const dist = Math.sqrt(Math.pow(fish.posX - tapX, 2) + Math.pow(fish.posY - tapY, 2));
 
         if (dist <= CATCH_RADIUS) {
           score += fish.scoreValue;
           caughtCount++;
-          caughtInThisTap = true;
+          caughtCountInThisTap++;
 
-          fish.element.remove(); // 親エンティティごと削除
+          fish.mover.remove(); // 親エンティティごと削除
           fishes.splice(i, 1);
           spawnFish(); // 補充
         }
