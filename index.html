@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR金魚すくい（表示修正版）</title>
+  <title>AR金魚すくい</title>
   <!-- A-Frame & MindAR Libraries -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
@@ -52,11 +52,7 @@
 
     <!-- AR Target Container -->
     <a-entity id="example-target" mindar-image-target="targetIndex: 0">
-      <!-- 
-        【修正ポイント1】判定用の透明な平面。
-        MindARではデフォルトで手前（Z軸正）を向くため、rotationは0 0 0でOK。
-        width/heightはターゲットの物理サイズに合わせて調整してください（ここでは仮に1とする）。
-      -->
+      <!-- 判定用の透明な平面 -->
       <a-plane id="pond" class="clickable" position="0 0 0" rotation="0 0 0" width="1" height="1" material="opacity: 0; transparent: true"></a-plane>
       
       <!-- 金魚を保持するコンテナ -->
@@ -70,10 +66,9 @@
   <script>
     // --- ゲーム設定と状態 ---
     const MAX_FISH = 8;
-    const CATCH_RADIUS = 0.2; // マーカーサイズ（1とする）に対する掬える範囲
+    const CATCH_RADIUS = 0.2; // マーカーに対する掬える範囲
     const DURABILITY_DECREASE = 10;
-    // 【修正ポイント2】行動範囲。ターゲットエンティティのサイズ（0.5 = ターゲットの端）に合わせる
-    const BOUNDS = 0.45; 
+    const BOUNDS = 0.45; // 行動範囲
 
     let score = 0;
     let caughtCount = 0;
@@ -82,7 +77,7 @@
     let fishes = [];
 
     const SPEED_TYPES = {
-      SLOW:   { speed: 0.002, score: 100 }, // サイズ感に合わせて少し遅く設定
+      SLOW:   { speed: 0.002, score: 100 },
       NORMAL: { speed: 0.005, score: 300 },
       FAST:   { speed: 0.009, score: 500 }
     };
@@ -133,7 +128,7 @@
       // 向き(進行方向回転)を制御する中間のエンティティ
       const rotatorEl = document.createElement('a-entity');
 
-      // モデル自体を持ち、初期の向きを修正する子エンティティ
+      // モデル自体を持ち、寝かせる回転を保持する子エンティティ
       const modelEl = document.createElement('a-entity');
       
       const isTypeA = Math.random() < 0.5;
@@ -145,27 +140,19 @@
         modelEl.setAttribute('scale', '0.001 0.001 0.001');
       }
 
-      // 【修正ポイント3】初期の向き修正（入れ子構造の最下層）
-      // モデルがカメラ（Z負）を向いている場合、マーカー平面（XY）に寝かせ、
-      // かつ回転の基準（0度）が上（Y正）を向くように調整する。
-      // glbモデルの初期向き依存だが、一般的な「X+90, Y=0, Z=0」で寝かせる設定を試す。
-      // もしこれで下を向くなら、モデル自体が最初から寝ている可能性がある。
-      // modelEl.setAttribute('rotation', '90 0 0'); // 一般的な修正
+      // 【修正箇所】コメントアウトを解除して有効化
+      // モデルをX軸90度回転させ、マーカー平面に対して水平に寝かせます
+      modelEl.setAttribute('rotation', '90 0 0');
 
-      // 【修正ポイント3-B】もし前回の「下を向く」が「垂直に突き刺さる」意味だった場合：
-      // 前回の「寝かせるX回転」は外して、JSのtick側で回転軸を制御するアプローチに変更。
-      // ここではrotationを設定せず、rotatorElで制御する。
-
-      // 入れ子にする: mover(位置) -> rotator(進行方向) -> model(glb)
+      // 構造の構築: mover (位置) -> rotator (進行方向) -> model (水平化)
       rotatorEl.appendChild(modelEl);
       moverEl.appendChild(rotatorEl);
 
-      // 初期位置の設定（マーカー上のXY平面、Zはカメラ側にわずかに浮かせる）
+      // 初期位置の設定（XY平面上、Zはわずかに浮かせる）
       const x = (Math.random() - 0.5) * BOUNDS * 2;
       const y = (Math.random() - 0.5) * BOUNDS * 2;
       moverEl.setAttribute('position', `${x} ${y} 0.01`);
 
-      // コンテナに追加
       fishContainer.appendChild(moverEl);
 
       // 速度タイプの決定
@@ -174,7 +161,7 @@
 
       const fishData = {
         mover: moverEl,
-        rotator: rotatorEl, // 回転制御用に追加
+        rotator: rotatorEl,
         speed: speedConfig.speed,
         scoreValue: speedConfig.score,
         posX: x,
@@ -194,7 +181,6 @@
       }
 
       fishes.forEach(fish => {
-        // ベクトル計算（XY平面上）
         const dx = fish.targetX - fish.posX;
         const dy = fish.targetY - fish.posY;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -207,8 +193,7 @@
           fish.posX += (dx / dist) * fish.speed;
           fish.posY += (dy / dist) * fish.speed;
 
-          // 【修正ポイント4】回転制御（XY平面での移動）
-          // atan2(dx, dy) で、Y軸正の方向（上）を0度とした角度（ラジアン）を取得
+          // 進行方向の計算（Y軸正の方向を0度とした角度）
           const angleRad = Math.atan2(dx, dy);
           const angleDeg = angleRad * (180 / Math.PI);
 
@@ -216,11 +201,7 @@
           fish.mover.setAttribute('position', `${fish.posX} ${fish.posY} 0.01`);
           
           // 向きの更新（中間: rotator）
-          // マーカー平面（XY）で動かすため、回転させるのは「Z軸」
-          // (A-FrameのEuler角の順序依存だが、ここではZ軸回転のみ適用)
           fish.rotator.setAttribute('rotation', `0 0 ${-angleDeg}`);
-          // モデル自体に rotation="90 0 0"（寝かせる）がかかっていると、
-          // ここのZ回転が予期せぬ方向になるため、モデルのrotationは0 0 0にしておくのが無難。
         }
       });
 
@@ -233,22 +214,17 @@
       const intersection = event.detail.intersection;
       if (!intersection) return;
 
-      // pond（a-plane）のローカル座標系でのタップ位置
       const tapX = intersection.point.x;
       const tapY = intersection.point.y;
-
-      let caughtCountInThisTap = 0;
 
       // 範囲内の金魚を一括で掬う
       for (let i = fishes.length - 1; i >= 0; i--) {
         const fish = fishes[i];
-        // XY平面上の距離
         const dist = Math.sqrt(Math.pow(fish.posX - tapX, 2) + Math.pow(fish.posY - tapY, 2));
 
         if (dist <= CATCH_RADIUS) {
           score += fish.scoreValue;
           caughtCount++;
-          caughtCountInThisTap++;
 
           fish.mover.remove(); // 親エンティティごと削除
           fishes.splice(i, 1);
