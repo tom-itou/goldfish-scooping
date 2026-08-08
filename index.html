@@ -1,334 +1,354 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR金魚すくい - 三丁目ふれあいひろば</title>
-    <!-- A-Frame, MindAR, animation-mixerライブラリ -->
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
-    <style>
-      /* ゲームUI表示 */
-      #ui-container {
-        position: absolute;
-        top: 20px;
-        left: 20px;
-        z-index: 999;
-        font-family: 'Helvetica Neue', Arial, sans-serif;
-        color: white;
-        background: rgba(0, 0, 0, 0.65);
-        padding: 15px 20px;
-        border-radius: 12px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-      }
-      .ui-text {
-        font-size: 18px;
-        font-weight: bold;
-        margin: 5px 0;
-      }
-      /* ゲームオーバー画面 */
-      #game-over-modal {
-        display: none;
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: rgba(0, 0, 0, 0.85);
-        z-index: 1000;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        color: white;
-        font-family: sans-serif;
-      }
-      #game-over-modal h1 {
-        font-size: 36px;
-        color: #ff4757;
-        margin-bottom: 10px;
-      }
-      #game-over-modal p {
-        font-size: 22px;
-        margin: 8px 0;
-      }
-      #retry-btn {
-        font-size: 20px;
-        padding: 12px 30px;
-        margin-top: 20px;
-        background: #2ed573;
-        color: white;
-        border: none;
-        border-radius: 25px;
-        cursor: pointer;
-        font-weight: bold;
-      }
-    </style>
-  </head>
-  <body style="margin: 0; overflow: hidden;">
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>AR金魚すくい</title>
+  
+  <!-- A-Frame & MindAR -->
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
-    <!-- UI（耐久度・すくった数・スコア） -->
-    <div id="ui-container">
-      <div class="ui-text">ポイの耐久度: <span id="durability-ui" style="color: #ff6b6b;">100</span> %</div>
-      <div class="ui-text">すくった数: <span id="count-ui" style="color: #1e90ff;">0</span> 匹</div>
-      <div class="ui-text">得点: <span id="score-ui" style="color: #ffd700;">0</span> 点</div>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      user-select: none;
+    }
+
+    /* UIオーバーレイ */
+    #ui-container {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .ui-card {
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 20px;
+      font-size: 16px;
+      font-weight: bold;
+      backdrop-filter: blur(4px);
+    }
+
+    .durability-bar {
+      color: #ff4757;
+    }
+
+    /* ゲームオーバー画面 */
+    #game-over {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 20;
+      color: white;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    #game-over h1 {
+      font-size: 36px;
+      margin-bottom: 10px;
+      color: #ff4757;
+    }
+
+    #game-over p {
+      font-size: 20px;
+      margin: 5px 0;
+    }
+
+    #restart-btn {
+      margin-top: 20px;
+      padding: 12px 30px;
+      font-size: 18px;
+      font-weight: bold;
+      background-color: #2ed573;
+      color: white;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- スコア・耐久度表示 UI -->
+  <div id="ui-container">
+    <div class="ui-card">
+      <div>ポイ耐久度: <span id="durability" class="durability-bar">10</span></div>
     </div>
-
-    <!-- ゲームオーバー画面 -->
-    <div id="game-over-modal">
-      <h1>ポイが破れた！</h1>
-      <p>すくった数: <span id="final-count">0</span> 匹</p>
-      <p>最終得点: <span id="final-score" style="color: #ffd700;">0</span> 点</p>
-      <button id="retry-btn" onclick="resetGame()">もう一度あそぶ</button>
+    <div class="ui-card">
+      <div>すくった数: <span id="caught-count">0</span> 匹</div>
+      <div>得点: <span id="score">0</span> pt</div>
     </div>
+  </div>
 
-    <!-- ARシーン設定 -->
-    <a-scene 
-      mindar-image="imageTargetSrc: ./targets.mind;" 
-      color-space="sRGB" 
-      renderer="colorManagement: true, physicallyCorrectLights" 
-      vr-mode-ui="enabled: false" 
-      device-orientation-permission-ui="enabled: false">
+  <!-- ゲームオーバー画面 -->
+  <div id="game-over">
+    <h1>ポイが破れた！</h1>
+    <p>最終すくい数: <span id="final-count">0</span> 匹</p>
+    <p>最終得点: <span id="final-score">0</span> pt</p>
+    <button id="restart-btn" onclick="resetGame()">もう一度あそぶ</button>
+  </div>
 
-      <!-- 3Dモデルアセット -->
-      <a-assets>
-        <a-asset-item id="fish-model-1" src="./goldfish_crucian_carp.glb"></a-asset-item>
-        <a-asset-item id="fish-model-2" src="./goldfish.glb"></a-asset-item>
-      </a-assets>
+  <!-- A-Frame / MindAR シーン -->
+  <a-scene 
+    mindar-image="imageTargetSrc: ./targets.mind;" 
+    color-space="sRGB" 
+    renderer="colorManagement: true, physicallyCorrectLights" 
+    vr-mode-ui="enabled: false" 
+    device-orientation-permission-ui="enabled: false">
+    
+    <a-assets>
+      <a-asset-item id="fishCarpModel" src="./goldfish_crucian_carp.glb"></a-asset-item>
+      <a-asset-item id="fishGoldModel" src="./goldfish.glb"></a-asset-item>
+    </a-assets>
 
-      <!-- カメラとレイキャスト設定 -->
-      <a-camera position="0 0 0" look-controls="enabled: false" raycaster="objects: .clickable" cursor="rayOrigin: mouse"></a-camera>
+    <a-camera position="0 0 0" look-controls="enabled: false" raycaster="objects: .clickable" cursor="fuse: false; rayOrigin: mouse;"></a-camera>
 
-      <!-- マーカー認識範囲 -->
-      <a-entity id="target-container" mindar-image-target="targetIndex: 0">
-        <!-- 透明なタップ受け用平面（マーカー全体でタップ判定を取るため） -->
-        <a-plane id="water-surface" class="clickable" position="0 0 0" width="1" height="1" visible="false"></a-plane>
-      </a-entity>
-    </a-scene>
+    <!-- マーカーターゲット (上から見下ろす平面想定) -->
+    <a-entity mindar-image-target="targetIndex: 0">
+      
+      <!-- 金魚が泳ぐ水槽領域 (マーカー基準) -->
+      <a-entity id="pond"></a-entity>
 
-    <script>
-      // 定数設定
-      const MAX_FISH_COUNT = 5;     // 最大金魚数
-      const INITIAL_DURABILITY = 100;// 初期耐久度
-      const DURABILITY_COST = 10;   // 1タップごとの消費耐久度
-      const CATCH_RADIUS = 0.25;    // ポイですくえる範囲（半径）
-      const MODELS = ['#fish-model-1', '#fish-model-2'];
-      const SCALES = ['0.2 0.2 0.2', '0.001 0.001 0.001'];
+      <!-- タップ判定用の透明プレーン (ポイを沈めてすくう領域) -->
+      <a-plane id="scoop-plane" class="clickable" position="0 0 0" rotation="0 0 0" width="3" height="3" material="transparent: true; opacity: 0.0"></a-plane>
 
-      // 速度・点数の3段階定義
-      const SPEED_TYPES = [
-        { type: 'slow',   speedFactor: 0.5, score: 10, prob: 0.4 }, // 遅い（40%の確率）: 10点
-        { type: 'normal', speedFactor: 1.0, score: 30, prob: 0.4 }, // 普通（40%の確率）: 30点
-        { type: 'fast',   speedFactor: 2.2, score: 50, prob: 0.2 }  // 速い（20%の確率）: 50点
-      ];
+    </a-entity>
+  </a-scene>
 
-      // ゲーム状態変数
-      let totalCount = 0;
-      let totalScore = 0;
-      let durability = INITIAL_DURABILITY;
-      let isGameOver = false;
+  <script>
+    // --- ゲーム設定項目 ---
+    const MAX_FISH = 8;
+    const INITIAL_DURABILITY = 10;
+    const SCOOP_RADIUS = 0.45; // 1回のタップで掬える半径 (マーカー単位)
+    const POND_LIMIT = 1.0;    // 水槽の移動境界範囲 (±X, ±Y)
 
-      // DOM要素
-      const targetContainer = document.getElementById('target-container');
-      const countUi = document.getElementById('count-ui');
-      const scoreUi = document.getElementById('score-ui');
-      const durabilityUi = document.getElementById('durability-ui');
-      const gameOverModal = document.getElementById('game-over-modal');
-      const finalCount = document.getElementById('final-count');
-      const finalScore = document.getElementById('final-score');
+    // 金魚の速度タイプ定義 (遅い / 普通 / 速い)
+    const SPEED_TYPES = [
+      { name: 'slow', speed: 0.003, score: 10, prob: 0.4 },
+      { name: 'normal', speed: 0.007, score: 25, prob: 0.4 },
+      { name: 'fast', speed: 0.012, score: 50, prob: 0.2 }
+    ];
 
-      // タップ時の一括掬い処理（クリックした位置のレイキャスト交点を使用）
-      document.querySelector('a-scene').addEventListener('click', (e) => {
-        if (isGameOver) return;
+    // モデル設定
+    const MODEL_CONFIGS = [
+      { assetId: '#fishCarpModel', scale: '0.2 0.2 0.2' },
+      { assetId: '#fishGoldModel', scale: '0.001 0.001 0.001' }
+    ];
 
-        // ポイの耐久度を1回分減らす
-        consumeDurability();
+    // ゲーム状態変数
+    let fishes = [];
+    let score = 0;
+    let caughtCount = 0;
+    let durability = INITIAL_DURABILITY;
+    let isGameOver = false;
 
-        // タップした3D空間上の座標を取得
-        const intersection = e.detail.intersection;
-        if (!intersection) return;
+    const pondEl = document.getElementById('pond');
+    const durabilityEl = document.getElementById('durability');
+    const scoreEl = document.getElementById('score');
+    const caughtCountEl = document.getElementById('caught-count');
+    const gameOverEl = document.getElementById('game-over');
 
-        const clickPos = intersection.point; // タップした場所の座標 {x, y, z}
+    // ランダムな速度タイプを取得
+    function getRandomSpeedType() {
+      const rand = Math.random();
+      let cumulative = 0;
+      for (const type of SPEED_TYPES) {
+        cumulative += type.prob;
+        if (rand < cumulative) return type;
+      }
+      return SPEED_TYPES[0];
+    }
 
-        // 判定範囲内にある金魚を検索
-        const allFish = document.querySelectorAll('.goldfish-entity');
-        let caughtCount = 0;
+    // 単一の金魚を生成
+    function createFish(id) {
+      const config = MODEL_CONFIGS[Math.floor(Math.random() * MODEL_CONFIGS.length)];
+      const speedType = getRandomSpeedType();
 
-        allFish.forEach(fish => {
-          // マーカー基準のローカル座標からワールド座標へ変換
-          const fishWorldPos = new THREE.Vector3();
-          fish.object3D.getWorldPosition(fishWorldPos);
+      const el = document.createElement('a-entity');
+      el.setAttribute('gltf-model', config.assetId);
+      el.setAttribute('scale', config.scale);
+      
+      // 平面上を泳ぐため、Z座標は若干浮かせる(0.02)
+      const posX = (Math.random() - 0.5) * POND_LIMIT * 1.5;
+      const posY = (Math.random() - 0.5) * POND_LIMIT * 1.5;
+      el.setAttribute('position', `${posX} ${posY} 0.02`);
 
-          // タップ位置と金魚の距離を計算
-          const distance = clickPos.distanceTo(fishWorldPos);
+      pondEl.appendChild(el);
 
-          // 範囲内（CATCH_RADIUS以下）の金魚をまとめてすくう
-          if (distance <= CATCH_RADIUS) {
-            const fishScore = parseInt(fish.getAttribute('data-score'), 10);
-            
-            totalCount++;
-            totalScore += fishScore;
-            caughtCount++;
+      // ランダムな移動方向ベクトル
+      const angle = Math.random() * Math.PI * 2;
+      const dirX = Math.cos(angle);
+      const dirY = Math.sin(angle);
 
-            // 金魚を消去
-            fish.parentNode.removeChild(fish);
-          }
-        });
+      return {
+        id,
+        el,
+        x: posX,
+        y: posY,
+        dirX,
+        dirY,
+        speed: speedType.speed,
+        scoreValue: speedType.score,
+        active: true
+      };
+    }
 
-        // 画面・UIの更新と減った分の金魚を補充
-        if (caughtCount > 0) {
-          countUi.textContent = totalCount;
-          scoreUi.textContent = totalScore;
+    // 初期化・スポーン
+    function initFish() {
+      pondEl.innerHTML = '';
+      fishes = [];
+      for (let i = 0; i < MAX_FISH; i++) {
+        fishes.push(createFish(i));
+      }
+    }
 
-          for (let i = 0; i < caughtCount; i++) {
-            spawnFish();
-          }
+    // 金魚の位置と向きの更新フレーム処理
+    function updateFish() {
+      if (isGameOver) return;
+
+      fishes.forEach(fish => {
+        if (!fish.active) return;
+
+        // 次の位置計算
+        let newX = fish.x + fish.dirX * fish.speed;
+        let newY = fish.y + fish.dirY * fish.speed;
+
+        // 壁でのバウンド判定
+        if (Math.abs(newX) > POND_LIMIT) {
+          fish.dirX *= -1;
+          newX = fish.x + fish.dirX * fish.speed;
         }
+        if (Math.abs(newY) > POND_LIMIT) {
+          fish.dirY *= -1;
+          newY = fish.y + fish.dirY * fish.speed;
+        }
+
+        // 定期的にランダムで泳ぐ方向を少し変更する
+        if (Math.random() < 0.02) {
+          const changeAngle = (Math.random() - 0.5) * 0.8;
+          const currentAngle = Math.atan2(fish.dirY, fish.dirX) + changeAngle;
+          fish.dirX = Math.cos(currentAngle);
+          fish.dirY = Math.sin(currentAngle);
+        }
+
+        fish.x = newX;
+        fish.y = newY;
+
+        // 進行方向への向き設定 (A-FrameのRotation変換)
+        // 進行方向の角度( radian -> degree )
+        const headingDeg = Math.atan2(fish.dirY, fish.dirX) * (180 / Math.PI);
+        
+        // 金魚モデルの初期向きに合わせた回転補正 (Z軸回転)
+        elPosition = `${fish.x} ${fish.y} 0.02`;
+        fish.el.setAttribute('position', elPosition);
+        fish.el.setAttribute('rotation', `90 ${headingDeg - 90} 0`);
       });
 
-      // 耐久度減算
-      function consumeDurability() {
-        if (isGameOver) return;
-        
-        durability -= DURABILITY_COST;
-        if (durability < 0) durability = 0;
-        durabilityUi.textContent = durability;
+      requestAnimationFrame(updateFish);
+    }
 
+    // 水面タップ時の「ポイですくう」処理
+    document.addEventListener('DOMContentLoaded', () => {
+      const scoopPlane = document.getElementById('scoop-plane');
+
+      scoopPlane.addEventListener('click', (evt) => {
+        if (isGameOver) return;
+
+        // 耐久度の減少
+        durability--;
+        durabilityEl.innerText = durability;
+
+        // タップ位置の交点座標 (マーカーローカル系)
+        const intersection = evt.detail.intersection;
+        if (intersection) {
+          const tapPoint = intersection.point;
+          
+          let caughtThisTurn = 0;
+
+          fishes.forEach((fish, index) => {
+            if (!fish.active) return;
+
+            // タップ位置と金魚の距離計算
+            const dx = fish.x - tapPoint.x;
+            const dy = fish.y - tapPoint.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            // 範囲内の金魚を一括で獲得
+            if (dist <= SCOOP_RADIUS) {
+              fish.active = false;
+              score += fish.scoreValue;
+              caughtCount++;
+              caughtThisTurn++;
+
+              // 旧モデル削除 & 新しい金魚の再スポーン
+              pondEl.removeChild(fish.el);
+              setTimeout(() => {
+                if (!isGameOver) {
+                  fishes[index] = createFish(index);
+                }
+              }, 600);
+            }
+          });
+
+          // UIの更新
+          scoreEl.innerText = score;
+          caughtCountEl.innerText = caughtCount;
+        }
+
+        // ゲーム終了判定
         if (durability <= 0) {
-          endGame();
+          triggerGameOver();
         }
-      }
-
-      // ランダム座標生成
-      function getRandomPosition() {
-        return {
-          x: (Math.random() - 0.5) * 0.6,
-          y: (Math.random() - 0.5) * 0.1,
-          z: (Math.random() - 0.5) * 0.8
-        };
-      }
-
-      // 速度タイプを確率に基づいて決定
-      function getRandomSpeedType() {
-        const rand = Math.random();
-        let cumulative = 0;
-        for (const speedObj of SPEED_TYPES) {
-          cumulative += speedObj.prob;
-          if (rand <= cumulative) return speedObj;
-        }
-        return SPEED_TYPES[0];
-      }
-
-      // 金魚のランダム周遊
-function animateFish(fishEntity, speedFactor) {
-  if (isGameOver || !fishEntity.parentElement) return;
-
-  // 現在の座標を取得
-  const currentPos = fishEntity.getAttribute('position') || { x: 0, y: 0, z: 0 };
-  // 次の目的地の座標を生成
-  const nextPos = getRandomPosition();
-
-  // 移動ベクトル（差分）の計算
-  const dx = nextPos.x - currentPos.x;
-  const dz = nextPos.z - currentPos.z;
-
-  // 進行方向の角度（Y軸の回転角度：度数法）を計算
-  let angleY = Math.atan2(dx, dz) * (180 / Math.PI);
-
-  // 【補足】3Dモデルのデフォルトの向きが逆・横向きの場合は、以下のコメントアウトを外して微調整してください
-  // angleY += 180; // 逆向き（お尻を向けて泳ぐ）場合
-   angleY += 90;  // 横向きの場合
-
-  // 移動にかかる時間の計算
-  const duration = (Math.random() * 2500 + 1500) / speedFactor;
-
-  // 1. まず進行方向へ頭を向ける（0.3秒で回転）
-  fishEntity.setAttribute('animation__rotate', {
-    property: 'rotation',
-    to: `0 ${angleY} 0`,
-    dur: 300,
-    easing: 'easeOutQuad'
-  });
-
-  // 2. 目的地の座標へ移動させる
-  fishEntity.setAttribute('animation__move', {
-    property: 'position',
-    to: `${nextPos.x} ${nextPos.y} ${nextPos.z}`,
-    dur: duration,
-    easing: 'easeInOutQuad'
-  });
-
-  // 移動が完了したら、次の目的地を設定して繰り返す
-  fishEntity.addEventListener('animationcomplete__move', function onAnimComplete() {
-    fishEntity.removeEventListener('animationcomplete__move', onAnimComplete);
-    animateFish(fishEntity, speedFactor);
-  });
-}
-      // 金魚の生成
-      function spawnFish() {
-        if (isGameOver) return;
-
-        const fish = document.createElement('a-entity');
-        const no = Math.floor(Math.random() * MODELS.length);
-        const randomModel = MODELS[no];
-        const initialPos = getRandomPosition();
-        const speedConfig = getRandomSpeedType();
-
-        // 属性・データの付与
-        fish.setAttribute('gltf-model', randomModel);
-        fish.setAttribute('class', 'clickable goldfish-entity');
-        fish.setAttribute('position', `${initialPos.x} ${initialPos.y} ${initialPos.z}`);
-        fish.setAttribute('scale', SCALES[no]);
-        fish.setAttribute('rotation', '90 0 0');
-        fish.setAttribute('data-score', speedConfig.score); // スコア値をデータ保持
-        
-        // アニメーション速度設定
-        fish.setAttribute('animation-mixer', `timeScale: ${speedConfig.speedFactor}`);
-
-        // シーンに追加して遊泳開始
-        targetContainer.appendChild(fish);
-        animateFish(fish, speedConfig.speedFactor);
-      }
-
-      // ゲーム初期化
-      function initGame() {
-        totalCount = 0;
-        totalScore = 0;
-        durability = INITIAL_DURABILITY;
-        isGameOver = false;
-
-        countUi.textContent = totalCount;
-        scoreUi.textContent = totalScore;
-        durabilityUi.textContent = durability;
-        gameOverModal.style.display = 'none';
-
-        // 既存の金魚を全削除
-        const existingFish = document.querySelectorAll('.goldfish-entity');
-        existingFish.forEach(fish => fish.parentNode.removeChild(fish));
-
-        // 10匹一括スポーン
-        for (let i = 0; i < MAX_FISH_COUNT; i++) {
-          spawnFish();
-        }
-      }
-
-      // ゲームオーバー処理
-      function endGame() {
-        isGameOver = true;
-        finalCount.textContent = totalCount;
-        finalScore.textContent = totalScore;
-        gameOverModal.style.display = 'flex';
-      }
-
-      // リトライ
-      function resetGame() {
-        initGame();
-      }
-
-      // 開始処理
-      window.addEventListener('load', () => {
-        setTimeout(initGame, 1000);
       });
-    </script>
-  </body>
+    });
+
+    // ゲームオーバー処理
+    function triggerGameOver() {
+      isGameOver = true;
+      document.getElementById('final-count').innerText = caughtCount;
+      document.getElementById('final-score').innerText = score;
+      gameOverEl.style.display = 'flex';
+    }
+
+    // リセット処理
+    function resetGame() {
+      score = 0;
+      caughtCount = 0;
+      durability = INITIAL_DURABILITY;
+      isGameOver = false;
+
+      scoreEl.innerText = score;
+      caughtCountEl.innerText = caughtCount;
+      durabilityEl.innerText = durability;
+      gameOverEl.style.display = 'none';
+
+      initFish();
+      requestAnimationFrame(updateFish);
+    }
+
+    // 初期化開始
+    window.addEventListener('load', () => {
+      initFish();
+      requestAnimationFrame(updateFish);
+    });
+  </script>
+</body>
 </html>
