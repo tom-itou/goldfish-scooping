@@ -2,19 +2,59 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>AR金魚すくい</title>
   <!-- A-Frame & MindAR Libraries -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
   <style>
-    body { margin: 0; overflow: hidden; font-family: 'Helvetica Neue', Arial, sans-serif; user-select: none; }
-    #ui-container { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; z-index: 10; color: #fff; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); font-size: 18px; font-weight: bold; pointer-events: none; }
+    body { 
+      margin: 0; 
+      overflow: hidden; 
+      font-family: 'Helvetica Neue', Arial, sans-serif; 
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    #ui-container { 
+      position: absolute; 
+      top: 10px; 
+      left: 10px; 
+      right: 10px; 
+      display: flex; 
+      justify-content: space-between; 
+      z-index: 10; 
+      color: #fff; 
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.8); 
+      font-size: 18px; 
+      font-weight: bold; 
+      pointer-events: none; 
+    }
     .ui-box { background: rgba(0, 0, 0, 0.5); padding: 8px 12px; border-radius: 8px; }
-    #game-over { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); z-index: 20; flex-direction: column; justify-content: center; align-items: center; color: white; }
+    #game-over { 
+      display: none; 
+      position: absolute; 
+      top: 0; left: 0; width: 100%; height: 100%; 
+      background: rgba(0, 0, 0, 0.75); 
+      z-index: 20; 
+      flex-direction: column; 
+      justify-content: center; 
+      align-items: center; 
+      color: white; 
+    }
     #game-over h1 { font-size: 36px; margin-bottom: 10px; color: #ff4757; }
     #game-over p { font-size: 20px; margin: 5px 0; }
-    #restart-btn { margin-top: 20px; padding: 12px 24px; font-size: 18px; background: #2ed573; border: none; color: white; border-radius: 25px; cursor: pointer; pointer-events: auto; }
+    #restart-btn { 
+      margin-top: 20px; 
+      padding: 12px 24px; 
+      font-size: 18px; 
+      background: #2ed573; 
+      border: none; 
+      color: white; 
+      border-radius: 25px; 
+      cursor: pointer; 
+      pointer-events: auto; 
+    }
   </style>
 </head>
 <body>
@@ -47,13 +87,12 @@
       <a-asset-item id="fishModelB" src="./goldfish.glb"></a-asset-item>
     </a-assets>
 
-    <!-- レイキャスターの設定 -->
-    <a-camera position="0 0 0" look-controls="enabled: false" raycaster="objects: .clickable" cursor="fuse: false; rayOrigin: mouse;"></a-camera>
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <!-- AR Target Container -->
     <a-entity id="example-target" mindar-image-target="targetIndex: 0">
-      <!-- 判定用の透明な平面 -->
-      <a-plane id="pond" class="clickable" position="0 0 0" rotation="0 0 0" width="1" height="1" material="opacity: 0; transparent: true"></a-plane>
+      <!-- 判定用の面（マーカー全体をカバー） -->
+      <a-plane id="pond" position="0 0 0" rotation="0 0 0" width="1.2" height="1.2" material="opacity: 0; transparent: true"></a-plane>
       
       <!-- 金魚を保持するコンテナ -->
       <a-entity id="fish-container"></a-entity>
@@ -66,7 +105,7 @@
   <script>
     // --- ゲーム設定と状態 ---
     const MAX_FISH = 8;
-    const CATCH_RADIUS = 0.2; // マーカーに対する掬える範囲
+    const CATCH_RADIUS = 0.25; // 掬える判定の半径
     const DURABILITY_DECREASE = 10;
     const BOUNDS = 0.45; // 行動範囲
 
@@ -90,10 +129,16 @@
     window.addEventListener('load', () => {
       initGame();
       
-      // A-Frameのraycaster経由でクリックを取得
-      pond.addEventListener('click', (e) => {
-        if (isGameOver || !targetEntity.object3D.visible) return;
-        handleScoop(e);
+      // 【直接的なイベント取得】画面上のタップ/クリックを最前面で検知
+      window.addEventListener('pointerdown', (e) => {
+        // リスタートボタンなどのUI操作は無視
+        if (e.target.tagName === 'BUTTON') return;
+        if (isGameOver) return;
+
+        // マーカーがカメラに写っていない場合は反応させない
+        if (!targetEntity.object3D.visible) return;
+
+        handleScreenTap(e.clientX, e.clientY);
       });
     });
 
@@ -106,13 +151,11 @@
       updateUI();
       document.getElementById('game-over').style.display = 'none';
 
-      // 既存の金魚を削除
       while (fishContainer.firstChild) {
         fishContainer.removeChild(fishContainer.firstChild);
       }
       fishes = [];
 
-      // 初期の金魚を生成
       for (let i = 0; i < MAX_FISH; i++) {
         spawnFish();
       }
@@ -122,13 +165,8 @@
     function spawnFish() {
       if (fishes.length >= MAX_FISH) return;
 
-      // 移動(位置)を制御する親エンティティ
       const moverEl = document.createElement('a-entity');
-      
-      // 向き(進行方向回転)を制御する中間のエンティティ
       const rotatorEl = document.createElement('a-entity');
-
-      // モデル自体を持ち、寝かせる回転を保持する子エンティティ
       const modelEl = document.createElement('a-entity');
       
       const isTypeA = Math.random() < 0.5;
@@ -140,21 +178,17 @@
         modelEl.setAttribute('scale', '0.001 0.001 0.001');
       }
 
-      // モデルをX軸90度回転させて水平に寝かせる
       modelEl.setAttribute('rotation', '90 0 0');
 
-      // 構造の構築: mover (位置) -> rotator (進行方向) -> model (水平化)
       rotatorEl.appendChild(modelEl);
       moverEl.appendChild(rotatorEl);
 
-      // 初期位置の設定（XY平面上、Zはわずかに浮かせる）
       const x = (Math.random() - 0.5) * BOUNDS * 2;
       const y = (Math.random() - 0.5) * BOUNDS * 2;
       moverEl.setAttribute('position', `${x} ${y} 0.01`);
 
       fishContainer.appendChild(moverEl);
 
-      // 速度タイプの決定
       const rand = Math.random();
       let speedConfig = rand < 0.4 ? SPEED_TYPES.SLOW : (rand < 0.8 ? SPEED_TYPES.NORMAL : SPEED_TYPES.FAST);
 
@@ -172,7 +206,7 @@
       fishes.push(fishData);
     }
 
-    // --- メインループ（移動と回転制御） ---
+    // --- メインループ ---
     function tick() {
       if (isGameOver || !targetEntity.object3D.visible) {
         requestAnimationFrame(tick);
@@ -188,18 +222,13 @@
           fish.targetX = (Math.random() - 0.5) * BOUNDS * 2;
           fish.targetY = (Math.random() - 0.5) * BOUNDS * 2;
         } else {
-          // 移動
           fish.posX += (dx / dist) * fish.speed;
           fish.posY += (dy / dist) * fish.speed;
 
-          // 進行方向の計算
           const angleRad = Math.atan2(dx, dy);
           const angleDeg = angleRad * (180 / Math.PI);
 
-          // 位置の更新（親: mover）
           fish.mover.setAttribute('position', `${fish.posX} ${fish.posY} 0.01`);
-          
-          // 【修正箇所】+180度オフセットを追加して前向きに進行させます
           fish.rotator.setAttribute('rotation', `0 0 ${-angleDeg + 180}`);
         }
       });
@@ -208,30 +237,50 @@
     }
     requestAnimationFrame(tick);
 
-    // --- タップ（掬う）処理 ---
-    function handleScoop(event) {
-      const intersection = event.detail.intersection;
-      if (!intersection) return;
+    // --- レイキャストによるタップ判定 ---
+    function handleScreenTap(clientX, clientY) {
+      const sceneEl = document.querySelector('a-scene');
+      const camera = sceneEl.camera;
+      if (!camera) return;
 
-      const tapX = intersection.point.x;
-      const tapY = intersection.point.y;
+      // 画面の2Dタップ座標を3D正規化座標 (-1 ~ +1) に変換
+      const mouse = new THREE.Vector2(
+        (clientX / window.innerWidth) * 2 - 1,
+        -(clientY / window.innerHeight) * 2 + 1
+      );
 
-      // 範囲内の金魚を一括で掬う
-      for (let i = fishes.length - 1; i >= 0; i--) {
-        const fish = fishes[i];
-        const dist = Math.sqrt(Math.pow(fish.posX - tapX, 2) + Math.pow(fish.posY - tapY, 2));
+      // カメラからのレイ（光線）を作成
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouse, camera);
 
-        if (dist <= CATCH_RADIUS) {
-          score += fish.scoreValue;
-          caughtCount++;
+      // pond（平面）との交点を取得
+      const intersects = raycaster.intersectObject(pond.object3D, true);
 
-          fish.mover.remove(); // 親エンティtyごと削除
-          fishes.splice(i, 1);
-          spawnFish(); // 補充
+      if (intersects.length > 0) {
+        // 交点のワールド座標をターゲット座標系に変換
+        const worldPoint = intersects[0].point;
+        const localPoint = targetEntity.object3D.worldToLocal(worldPoint.clone());
+
+        const tapX = localPoint.x;
+        const tapY = localPoint.y;
+
+        // 範囲内の金魚をすくう
+        for (let i = fishes.length - 1; i >= 0; i--) {
+          const fish = fishes[i];
+          const dist = Math.sqrt(Math.pow(fish.posX - tapX, 2) + Math.pow(fish.posY - tapY, 2));
+
+          if (dist <= CATCH_RADIUS) {
+            score += fish.scoreValue;
+            caughtCount++;
+
+            fish.mover.remove();
+            fishes.splice(i, 1);
+            spawnFish(); // 新しい金魚を補充
+          }
         }
       }
 
-      // 耐久度減少
+      // 成功・失敗にかかわらずタップで耐久度減少
       durability -= DURABILITY_DECREASE;
       if (durability <= 0) {
         durability = 0;
