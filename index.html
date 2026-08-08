@@ -94,13 +94,12 @@
         <a-asset-item id="fish-model-2" src="./goldfish.glb"></a-asset-item>
       </a-assets>
 
-      <!-- カメラ設定 -->
+      <!-- カメラとレイキャスト設定 -->
       <a-camera position="0 0 0" look-controls="enabled: false" raycaster="objects: .clickable" cursor="rayOrigin: mouse"></a-camera>
 
-      <!-- マーカー認識領域 -->
+      <!-- マーカー認識範囲 -->
       <a-entity id="target-container" mindar-image-target="targetIndex: 0">
-        <!-- 水面全体でのタップ判定用Invisibleプレーン -->
-        <a-plane id="water-surface" class="clickable" position="0 0 0" width="1.2" height="1.6" visible="false"></a-plane>
+        <a-plane id="water-surface" class="clickable" position="0 0 0" width="1" height="1" visible="false"></a-plane>
       </a-entity>
     </a-scene>
 
@@ -109,8 +108,9 @@
       const MAX_FISH_COUNT = 10;     // 最大金魚数
       const INITIAL_DURABILITY = 100;// 初期耐久度
       const DURABILITY_COST = 10;   // 1タップごとの消費耐久度
-      const CATCH_RADIUS = 0.25;    // ポイですくえる半径
+      const CATCH_RADIUS = 0.25;    // ポイですくえる範囲
       const MODELS = ['#fish-model-1', '#fish-model-2'];
+      const SCALES = ['0.2 0.2 0.2', '0.001 0.001 0.001'];
 
       // 速度・点数の3段階定義
       const SPEED_TYPES = [
@@ -134,7 +134,7 @@
       const finalCount = document.getElementById('final-count');
       const finalScore = document.getElementById('final-score');
 
-      // タップ時の一括すくい処理（見下ろし座標系対応）
+      // タップ時の一括掬い処理
       document.querySelector('a-scene').addEventListener('click', (e) => {
         if (isGameOver) return;
 
@@ -143,16 +143,15 @@
         const intersection = e.detail.intersection;
         if (!intersection) return;
 
-        const clickPos = intersection.point; // タップした3D世界座標
+        const clickPos = intersection.point;
 
-        const allFish = document.querySelectorAll('.goldfish-group');
+        const allFish = document.querySelectorAll('.goldfish-entity');
         let caughtCount = 0;
 
         allFish.forEach(fish => {
           const fishWorldPos = new THREE.Vector3();
           fish.object3D.getWorldPosition(fishWorldPos);
 
-          // タップ位置と金魚の距離を計算
           const distance = clickPos.distanceTo(fishWorldPos);
 
           if (distance <= CATCH_RADIUS) {
@@ -189,13 +188,12 @@
         }
       }
 
-      // 水槽見下ろし用：ランダム座標生成
-      // A4縦長水槽の範囲：X(横幅 -0.35〜0.35), Y(縦幅 -0.5〜0.5), Z(水深 -0.05〜-0.2)
+      // ランダム座標生成
       function getRandomPosition() {
         return {
-          x: (Math.random() - 0.5) * 0.7, // X軸（左右）
-          y: (Math.random() - 0.5) * 1.0, // Y軸（水槽の縦方向）
-          z: -(Math.random() * 0.15 + 0.05) // Z軸（マーマーより奥・水深）
+          x: (Math.random() - 0.5) * 0.6,
+          y: (Math.random() - 0.5) * 0.1,
+          z: (Math.random() - 0.5) * 0.8
         };
       }
 
@@ -210,74 +208,63 @@
         return SPEED_TYPES[0];
       }
 
-      // 上から見下ろした状態での周遊（XY平面上での向き回転＋移動）
-      function animateFish(fishGroup, speedFactor) {
-        if (isGameOver || !fishGroup.parentElement) return;
+      // 金魚の周遊（回転＋移動）
+      function animateFish(fishEntity, speedFactor) {
+        if (isGameOver || !fishEntity.parentElement) return;
 
-        const currentPos = fishGroup.getAttribute('position') || { x: 0, y: 0, z: -0.1 };
+        const currentPos = fishEntity.getAttribute('position') || { x: 0, y: 0, z: 0 };
         const nextPos = getRandomPosition();
 
-        // XY平面（画面上）での移動ベクトル
         const dx = nextPos.x - currentPos.x;
-        const dy = nextPos.y - currentPos.y;
+        const dz = nextPos.z - currentPos.z;
 
-        // 水上から見た時の進行方向の角度（Z軸まわりの回転角度）を計算
-        let angleZ = Math.atan2(dy, dx) * (180 / Math.PI) - 90;
+        // 進行方向の角度を計算
+        let angleY = Math.atan2(dx, dz) * (180 / Math.PI);
 
         const duration = (Math.random() * 2500 + 1500) / speedFactor;
 
-        // 1. まず進行方向に頭を向ける（Z軸回転）
-        fishGroup.setAttribute('animation__rotate', {
+        // 向きを変更
+        fishEntity.setAttribute('animation__rotate', {
           property: 'rotation',
-          to: `0 0 ${angleZ}`,
+          to: `0 ${angleY} 0`,
           dur: 300,
           easing: 'easeOutQuad'
         });
 
-        // 2. 新しい位置へ移動
-        fishGroup.setAttribute('animation__move', {
+        // 位置を移動
+        fishEntity.setAttribute('animation__move', {
           property: 'position',
           to: `${nextPos.x} ${nextPos.y} ${nextPos.z}`,
           dur: duration,
           easing: 'easeInOutQuad'
         });
 
-        fishGroup.addEventListener('animationcomplete__move', function onAnimComplete() {
-          fishGroup.removeEventListener('animationcomplete__move', onAnimComplete);
-          animateFish(fishGroup, speedFactor);
+        fishEntity.addEventListener('animationcomplete__move', function onAnimComplete() {
+          fishEntity.removeEventListener('animationcomplete__move', onAnimComplete);
+          animateFish(fishEntity, speedFactor);
         });
       }
 
-      // 金魚生成（2層構造でモデルの姿勢を上向きに固定）
+      // 金魚生成
       function spawnFish() {
         if (isGameOver) return;
 
-        // 親エンティティ：位置と2D進行方向（回転）を管理
-        const fishGroup = document.createElement('a-entity');
+        const fish = document.createElement('a-entity');
+        const no = Math.floor(Math.random() * MODELS.length);
+        const randomModel = MODELS[no];
         const initialPos = getRandomPosition();
         const speedConfig = getRandomSpeedType();
 
-        fishGroup.setAttribute('class', 'clickable goldfish-group');
-        fishGroup.setAttribute('position', `${initialPos.x} ${initialPos.y} ${initialPos.z}`);
-        fishGroup.setAttribute('data-score', speedConfig.score);
-
-        // 子エンティティ：3Dモデル自体（姿勢補正：背中をカメラ／上に向ける）
-        const fishModel = document.createElement('a-entity');
-        const randomModel = MODELS[Math.floor(Math.random() * MODELS.length)];
-
-        fishModel.setAttribute('gltf-model', randomModel);
-        fishModel.setAttribute('scale', '0.08 0.08 0.08');
+        fish.setAttribute('gltf-model', randomModel);
+        fish.setAttribute('class', 'clickable goldfish-entity');
+        fish.setAttribute('position', `${initialPos.x} ${initialPos.y} ${initialPos.z}`);
+        fish.setAttribute('scale', SCALES[no]);
+        fish.setAttribute('data-score', speedConfig.score);
         
-        // 3Dモデルの背中を真上に向け、頭を上方向にセットする補正回転
-        // ※モデルの初期姿勢に応じて '90 0 0' の数値を微調整できます
-        fishModel.setAttribute('rotation', '90 0 0'); 
-        fishModel.setAttribute('animation-mixer', `timeScale: ${speedConfig.speedFactor}`);
+        fish.setAttribute('animation-mixer', `timeScale: ${speedConfig.speedFactor}`);
 
-        fishGroup.appendChild(fishModel);
-        targetContainer.appendChild(fishGroup);
-
-        // 泳ぎアニメーションスタート
-        animateFish(fishGroup, speedConfig.speedFactor);
+        targetContainer.appendChild(fish);
+        animateFish(fish, speedConfig.speedFactor);
       }
 
       // 初期化
@@ -292,7 +279,7 @@
         durabilityUi.textContent = durability;
         gameOverModal.style.display = 'none';
 
-        const existingFish = document.querySelectorAll('.goldfish-group');
+        const existingFish = document.querySelectorAll('.goldfish-entity');
         existingFish.forEach(fish => fish.parentNode.removeChild(fish));
 
         for (let i = 0; i < MAX_FISH_COUNT; i++) {
