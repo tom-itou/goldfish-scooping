@@ -31,14 +31,46 @@
       pointer-events: none; 
     }
     .ui-box { background: rgba(0, 0, 0, 0.5); padding: 8px 12px; border-radius: 8px; }
+    #game-over { 
+      display: none; 
+      position: absolute; 
+      top: 0; left: 0; width: 100%; height: 100%; 
+      background: rgba(0, 0, 0, 0.75); 
+      z-index: 20; 
+      flex-direction: column; 
+      justify-content: center; 
+      align-items: center; 
+      color: white; 
+    }
+    #game-over h1 { font-size: 36px; margin-bottom: 10px; color: #ff4757; }
+    #game-over p { font-size: 20px; margin: 5px 0; }
+    #restart-btn { 
+      margin-top: 20px; 
+      padding: 12px 24px; 
+      font-size: 18px; 
+      background: #2ed573; 
+      border: none; 
+      color: white; 
+      border-radius: 25px; 
+      cursor: pointer; 
+      pointer-events: auto; 
+    }
   </style>
 </head>
 <body>
 
-  <!-- UI Overlay -->
+  <!-- UI Overlay（耐久度表示を非表示に修正） -->
   <div id="ui-container">
     <div class="ui-box">掬った数: <span id="count-val">0</span> 匹</div>
     <div class="ui-box">得点: <span id="score-val">0</span> pt</div>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div id="game-over">
+    <h1>ポイが破れました！</h1>
+    <p>最終結果: <span id="final-count">0</span> 匹</p>
+    <p>最終得点: <span id="final-score">0</span> pt</p>
+    <button id="restart-btn" onclick="resetGame()">もう一度遊ぶ</button>
   </div>
 
   <!-- AR Scene -->
@@ -72,12 +104,16 @@
   </a-scene>
 
   <script>
+    // --- ゲーム設定と状態 ---
     const MAX_FISH = 8;
     const CATCH_RADIUS = 0.25;
+    const DURABILITY_DECREASE = 10; // タップごとの耐久度減少値
     const BOUNDS = 0.45;
 
     let score = 0;
     let caughtCount = 0;
+    let durability = 100; // 内部の耐久度パラメータを復活
+    let isGameOver = false;
     let fishes = [];
 
     // Web Audio APIの初期化（効果音用）
@@ -99,6 +135,9 @@
       initGame();
       
       window.addEventListener('pointerdown', (e) => {
+        if (e.target.tagName === 'BUTTON') return;
+        if (isGameOver) return;
+
         if (!audioCtx) {
           audioCtx = new AudioContext();
         }
@@ -111,7 +150,11 @@
     function initGame() {
       score = 0;
       caughtCount = 0;
+      durability = 100; // 耐久度を初期化
+      isGameOver = false;
+
       updateUI();
+      document.getElementById('game-over').style.display = 'none';
 
       while (fishContainer.firstChild) {
         fishContainer.removeChild(fishContainer.firstChild);
@@ -167,7 +210,7 @@
     }
 
     function tick() {
-      if (!targetEntity.object3D.visible) {
+      if (isGameOver || !targetEntity.object3D.visible) {
         requestAnimationFrame(tick);
         return;
       }
@@ -221,7 +264,6 @@
         let totalGainedScore = 0;
         let caughtInThisTap = 0;
 
-        // タップ位置の波紋エフェクト
         createRippleEffect(tapX, tapY);
 
         for (let i = fishes.length - 1; i >= 0; i--) {
@@ -240,19 +282,25 @@
           }
         }
 
-        // 金魚をすくえた場合のエフェクト発生
         if (caughtInThisTap > 0) {
           playSplashSound();
           createScorePopup(tapX, tapY, `+${totalGainedScore}pt`);
         }
       }
 
+      // 内部でのみ耐久度を減算
+      durability -= DURABILITY_DECREASE;
+      if (durability <= 0) {
+        durability = 0;
+        updateUI();
+        endGame();
+        return;
+      }
+
       updateUI();
     }
 
     // --- エフェクト処理 ---
-
-    // 水音効果音の生成 (Web Audio API)
     function playSplashSound() {
       if (!audioCtx) return;
       if (audioCtx.state === 'suspended') {
@@ -263,7 +311,6 @@
       const gain = audioCtx.createGain();
 
       osc.type = 'sine';
-      // 高音から低音へ素早く変化させて水滴音を再現
       osc.frequency.setValueAtTime(800, audioCtx.currentTime);
       osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.15);
 
@@ -277,7 +324,6 @@
       osc.stop(audioCtx.currentTime + 0.15);
     }
 
-    // 水面の波紋エフェクト
     function createRippleEffect(x, y) {
       const ring = document.createElement('a-ring');
       ring.setAttribute('position', `${x} ${y} 0.02`);
@@ -285,7 +331,6 @@
       ring.setAttribute('radius-outer', '0.03');
       ring.setAttribute('material', 'color: #718093; opacity: 0.8; transparent: true');
 
-      // 拡大アニメーション
       ring.setAttribute('animation__scale', {
         property: 'scale',
         to: '3 3 3',
@@ -293,7 +338,6 @@
         easing: 'easeOutQuad'
       });
 
-      // フェードアウトアニメーション
       ring.setAttribute('animation__fade', {
         property: 'material.opacity',
         to: '0',
@@ -303,12 +347,9 @@
 
       effectContainer.appendChild(ring);
 
-      setTimeout(() => {
-        ring.remove();
-      }, 500);
+      setTimeout(() => { ring.remove(); }, 500);
     }
 
-    // スコアポップアップ表示
     function createScorePopup(x, y, text) {
       const textEl = document.createElement('a-text');
       textEl.setAttribute('value', text);
@@ -317,7 +358,6 @@
       textEl.setAttribute('color', '#fbc531');
       textEl.setAttribute('scale', '0.4 0.4 0.4');
 
-      // 上昇アニメーション
       textEl.setAttribute('animation__move', {
         property: 'position',
         to: `${x} ${y + 0.15} 0.2`,
@@ -325,7 +365,6 @@
         easing: 'easeOutCubic'
       });
 
-      // フェードアウトアニメーション
       textEl.setAttribute('animation__fade', {
         property: 'material.opacity',
         to: '0',
@@ -335,14 +374,23 @@
 
       effectContainer.appendChild(textEl);
 
-      setTimeout(() => {
-        textEl.remove();
-      }, 800);
+      setTimeout(() => { textEl.remove(); }, 800);
     }
 
     function updateUI() {
       document.getElementById('count-val').innerText = caughtCount;
       document.getElementById('score-val').innerText = score;
+    }
+
+    function endGame() {
+      isGameOver = true;
+      document.getElementById('final-count').innerText = caughtCount;
+      document.getElementById('final-score').innerText = score;
+      document.getElementById('game-over').style.display = 'flex';
+    }
+
+    function resetGame() {
+      initGame();
     }
   </script>
 </body>
