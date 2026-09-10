@@ -59,7 +59,7 @@
 </head>
 <body>
 
-  <!-- UI Overlay（耐久度表示を非表示に修正） -->
+  <!-- UI Overlay -->
   <div id="ui-container">
     <div class="ui-box">掬った数: <span id="count-val">0</span> 匹</div>
     <div class="ui-box">得点: <span id="score-val">0</span> pt</div>
@@ -107,12 +107,12 @@
     // --- ゲーム設定と状態 ---
     const MAX_FISH = 8;
     const CATCH_RADIUS = 0.25;
-    const DURABILITY_DECREASE = 10; // タップごとの耐久度減少値
+    const DURABILITY_DECREASE = 10;
     const BOUNDS = 0.45;
 
     let score = 0;
     let caughtCount = 0;
-    let durability = 100; // 内部の耐久度パラメータを復活
+    let durability = 100;
     let isGameOver = false;
     let fishes = [];
 
@@ -121,9 +121,9 @@
     let audioCtx = null;
 
     const SPEED_TYPES = {
-      SLOW:   { speed: 0.002, score: 100 },
-      NORMAL: { speed: 0.005, score: 300 },
-      FAST:   { speed: 0.009, score: 500 }
+      SLOW:   { type: 'SLOW',   speed: 0.002, score: 100 },
+      NORMAL: { type: 'NORMAL', speed: 0.005, score: 300 },
+      FAST:   { type: 'FAST',   speed: 0.009, score: 500 }
     };
 
     const pond = document.getElementById('pond');
@@ -150,7 +150,7 @@
     function initGame() {
       score = 0;
       caughtCount = 0;
-      durability = 100; // 耐久度を初期化
+      durability = 100;
       isGameOver = false;
 
       updateUI();
@@ -166,15 +166,29 @@
       }
     }
 
+    // --- 金魚の生成 ---
     function spawnFish() {
       if (fishes.length >= MAX_FISH) return;
 
+      // 1. 速度タイプの決定（FASTは画面内に最大1匹）
+      const fastCount = fishes.filter(f => f.type === 'FAST').length;
+      let speedConfig;
+      if (fastCount >= 1) {
+        // すでにFASTが1匹いる場合は、SLOWまたはNORMALのみをランダム選択
+        speedConfig = Math.random() < 0.5 ? SPEED_TYPES.SLOW : SPEED_TYPES.NORMAL;
+      } else {
+        // FASTがまだいない場合のみ確率でFASTを生成
+        const rand = Math.random();
+        speedConfig = rand < 0.4 ? SPEED_TYPES.SLOW : (rand < 0.8 ? SPEED_TYPES.NORMAL : SPEED_TYPES.FAST);
+      }
+
+      // 2. エンティティの構築
       const moverEl = document.createElement('a-entity');
       const rotatorEl = document.createElement('a-entity');
       const modelEl = document.createElement('a-entity');
       
-      const isTypeA = Math.random() < 0.5;
-      if (isTypeA) {
+      // 【修正箇所】FASTタイプなら fishModelA、それ以外（SLOW / NORMAL）は fishModelB を設定
+      if (speedConfig.type === 'FAST') {
         modelEl.setAttribute('gltf-model', '#fishModelA');
         modelEl.setAttribute('scale', '0.2 0.2 0.2');
       } else {
@@ -192,10 +206,8 @@
 
       fishContainer.appendChild(moverEl);
 
-      const rand = Math.random();
-      let speedConfig = rand < 0.4 ? SPEED_TYPES.SLOW : (rand < 0.8 ? SPEED_TYPES.NORMAL : SPEED_TYPES.FAST);
-
       const fishData = {
+        type: speedConfig.type,
         mover: moverEl,
         rotator: rotatorEl,
         speed: speedConfig.speed,
@@ -288,7 +300,6 @@
         }
       }
 
-      // 内部でのみ耐久度を減算
       durability -= DURABILITY_DECREASE;
       if (durability <= 0) {
         durability = 0;
