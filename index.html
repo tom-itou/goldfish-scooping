@@ -190,10 +190,10 @@
       // 【修正箇所】FASTタイプなら fishModelA、それ以外（SLOW / NORMAL）は fishModelB を設定
       if (speedConfig.type === 'FAST') {
         modelEl.setAttribute('gltf-model', '#fishModelA');
-        modelEl.setAttribute('scale', '0.2 0.2 0.2');
+        modelEl.setAttribute('scale', '0.1 0.1 0.1');
       } else {
         modelEl.setAttribute('gltf-model', '#fishModelB');
-        modelEl.setAttribute('scale', '0.001 0.001 0.001');
+        modelEl.setAttribute('scale', '0.0005 0.0005 0.0005');
       }
 
       modelEl.setAttribute('rotation', '90 0 0');
