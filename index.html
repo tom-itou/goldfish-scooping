@@ -79,8 +79,8 @@
 
   <!-- UI Overlay -->
   <div id="ui-container">
-    <div class="ui-box">掬った数: <span id="count-val">0</span> 匹</div>
-    <div class="ui-box">得点: <span id="score-val">0</span> pt</div>
+    <div class="ui-box">すくった数: <span id="count-val">0</span> 匹</div>
+    <div class="ui-box">とくてん: <span id="score-val">0</span> pt</div>
   </div>
 
   <!-- Game Over & Ranking Screen -->
@@ -90,19 +90,19 @@
     
     <!-- 名前登録フォーム -->
     <div id="form-container">
-      <input type="text" id="player-name" placeholder="名前を入力" maxlength="8">
-      <button id="submit-btn" onclick="submitScore()">登録</button>
+      <input type="text" id="player-name" placeholder="ニックネームをいれてね" maxlength="8">
+      <button id="submit-btn" onclick="submitScore()">とうろく</button>
     </div>
 
     <!-- ランキング結果表示 -->
     <div id="ranking-result">
       <div class="rank-section">
-        <div class="rank-title">🏆 得点 ランキング (TOP 3)</div>
+        <div class="rank-title">🏆 とくてん ランキング (TOP 3)</div>
         <div id="top-score-list" class="rank-list"></div>
         <div id="my-score-rank" class="my-rank"></div>
       </div>
       <div class="rank-section">
-        <div class="rank-title">🐟 掬った数 ランキング (TOP 3)</div>
+        <div class="rank-title">🐟 すくった数 ランキング (TOP 3)</div>
         <div id="top-count-list" class="rank-list"></div>
         <div id="my-count-rank" class="my-rank"></div>
       </div>
@@ -141,9 +141,10 @@
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzpxrfqTYib4fPKU4naGKDna9FmZr2gbL3HeusESJjnsn2njilt7qNggID_I4Jeul9D/exec";
 
     const MAX_FISH = 8;
-    const CATCH_RADIUS = 0.18;
-    const DURABILITY_DECREASE = 15;
-    const BOUNDS = 0.45;
+    const CATCH_RADIUS = 0.12;
+    const DURABILITY_DECREASE = 10;
+    const BOUNDS_X = 0.40;
+    const BOUNDS_Y = 0.28;
 
     let score = 0;
     let caughtCount = 0;
@@ -156,8 +157,8 @@
 
     const SPEED_TYPES = {
       SLOW:   { type: 'SLOW',   speed: 0.003, score: 100 },
-      NORMAL: { type: 'NORMAL', speed: 0.007, score: 300 },
-      FAST:   { type: 'FAST',   speed: 0.012, score: 600 }
+      NORMAL: { type: 'NORMAL', speed: 0.008, score: 300 },
+      FAST:   { type: 'FAST',   speed: 0.015, score: 600 }
     };
 
     const pond = document.getElementById('pond');
@@ -219,18 +220,18 @@
       
       if (speedConfig.type === 'FAST') {
         modelEl.setAttribute('gltf-model', '#fishModelA');
-        modelEl.setAttribute('scale', '0.2 0.2 0.2');
+        modelEl.setAttribute('scale', '0.1 0.1 0.1');
       } else {
         modelEl.setAttribute('gltf-model', '#fishModelB');
-        modelEl.setAttribute('scale', '0.001 0.001 0.001');
+        modelEl.setAttribute('scale', '0.0005 0.0005 0.0005');
       }
 
       modelEl.setAttribute('rotation', '90 0 0');
       rotatorEl.appendChild(modelEl);
       moverEl.appendChild(rotatorEl);
 
-      const x = (Math.random() - 0.5) * BOUNDS * 2;
-      const y = (Math.random() - 0.5) * BOUNDS * 2;
+      const x = (Math.random() - 0.5) * BOUNDS_X * 2;
+      const y = (Math.random() - 0.5) * BOUNDS_Y * 2;
       moverEl.setAttribute('position', `${x} ${y} 0.01`);
 
       fishContainer.appendChild(moverEl);
@@ -243,8 +244,8 @@
         scoreValue: speedConfig.score,
         posX: x,
         posY: y,
-        targetX: (Math.random() - 0.5) * BOUNDS * 2,
-        targetY: (Math.random() - 0.5) * BOUNDS * 2
+        targetX: (Math.random() - 0.5) * BOUNDS_X * 2,
+        targetY: (Math.random() - 0.5) * BOUNDS_Y * 2
       };
 
       fishes.push(fishData);
@@ -262,8 +263,8 @@
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist < 0.02) {
-          fish.targetX = (Math.random() - 0.5) * BOUNDS * 2;
-          fish.targetY = (Math.random() - 0.5) * BOUNDS * 2;
+          fish.targetX = (Math.random() - 0.5) * BOUNDS_X * 2;
+          fish.targetY = (Math.random() - 0.5) * BOUNDS_Y * 2;
         } else {
           fish.posX += (dx / dist) * fish.speed;
           fish.posY += (dy / dist) * fish.speed;
