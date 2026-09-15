@@ -4,77 +4,120 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>AR金魚すくい</title>
+  <!-- A-Frame & MindAR Libraries -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
   <style>
     body { 
-      margin: 0; overflow: hidden; font-family: 'Helvetica Neue', Arial, sans-serif; 
-      user-select: none; -webkit-user-select: none; touch-action: manipulation;
+      margin: 0; 
+      overflow: hidden; 
+      font-family: 'Helvetica Neue', Arial, sans-serif; 
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
     }
     #ui-container { 
-      position: absolute; top: 10px; left: 10px; right: 10px; 
-      display: flex; justify-content: space-between; z-index: 10; 
-      color: #fff; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); font-size: 18px; font-weight: bold; pointer-events: none; 
+      position: absolute; 
+      top: 10px; 
+      left: 10px; 
+      right: 10px; 
+      display: flex; 
+      justify-content: space-between; 
+      z-index: 10; 
+      color: #fff; 
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.8); 
+      font-size: 18px; 
+      font-weight: bold; 
+      pointer-events: none; 
     }
     .ui-box { background: rgba(0, 0, 0, 0.5); padding: 8px 12px; border-radius: 8px; }
     
+    /* ゲームオーバー＆ランキング画面 */
     #game-over { 
-      display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-      background: rgba(0, 0, 0, 0.85); z-index: 20; 
-      flex-direction: column; justify-content: flex-start; align-items: center; 
-      color: white; overflow-y: auto; padding: 20px 10px; box-sizing: border-box;
+      display: none; 
+      position: absolute; 
+      top: 0; left: 0; width: 100%; height: 100%; 
+      background: rgba(0, 0, 0, 0.85); 
+      z-index: 20; 
+      flex-direction: column; 
+      justify-content: center; 
+      align-items: center; 
+      color: white; 
+      box-sizing: border-box;
+      padding: 20px;
+      overflow-y: auto;
     }
-    #game-over h1 { font-size: 28px; margin: 10px 0; color: #ff4757; }
-    #game-over p { font-size: 16px; margin: 4px 0; }
-    
-    .input-group { margin: 15px 0; text-align: center; }
-    .input-group input { padding: 8px 12px; font-size: 16px; border-radius: 6px; border: none; text-align: center; }
-    .btn { padding: 10px 20px; font-size: 16px; background: #2ed573; border: none; color: white; border-radius: 20px; cursor: pointer; margin: 5px; }
-    
-    #ranking-container { width: 100%; max-width: 360px; margin-top: 15px; display: none; }
-    .ranking-section { background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; }
-    .ranking-title { font-size: 16px; font-weight: bold; color: #fbc531; margin-bottom: 5px; border-bottom: 1px solid #555; padding-bottom: 3px; }
-    .ranking-list { font-size: 14px; text-align: left; line-height: 1.5; }
-    .my-rank { color: #00d2d3; font-weight: bold; font-size: 15px; margin-bottom: 8px; text-align: center; }
+    #game-over h1 { font-size: 28px; margin-bottom: 5px; color: #ff4757; }
+    #game-over p { font-size: 16px; margin: 3px 0; }
+
+    /* 名前入力エリア */
+    #form-container { margin: 15px 0; text-align: center; }
+    #player-name { padding: 8px; font-size: 16px; border-radius: 5px; border: none; text-align: center; width: 180px; }
+    #submit-btn { padding: 8px 16px; font-size: 16px; background: #ff9f43; border: none; color: white; border-radius: 5px; cursor: pointer; margin-left: 5px; }
+
+    /* ランキング表示エリア */
+    #ranking-result { display: none; width: 100%; max-width: 320px; margin-top: 10px; background: rgba(255,255,255,0.1); padding: 12px; border-radius: 10px; }
+    .rank-section { margin-bottom: 12px; }
+    .rank-title { font-weight: bold; color: #fbc531; border-bottom: 1px solid #fbc531; padding-bottom: 3px; margin-bottom: 5px; font-size: 14px; text-align: left;}
+    .rank-list { font-size: 13px; text-align: left; line-height: 1.5; }
+    .my-rank { font-weight: bold; color: #4cd137; margin-top: 5px; font-size: 14px; }
+
+    #restart-btn { 
+      margin-top: 15px; 
+      padding: 10px 20px; 
+      font-size: 16px; 
+      background: #2ed573; 
+      border: none; 
+      color: white; 
+      border-radius: 25px; 
+      cursor: pointer; 
+      pointer-events: auto; 
+    }
   </style>
 </head>
 <body>
 
+  <!-- UI Overlay -->
   <div id="ui-container">
     <div class="ui-box">掬った数: <span id="count-val">0</span> 匹</div>
     <div class="ui-box">得点: <span id="score-val">0</span> pt</div>
   </div>
 
+  <!-- Game Over & Ranking Screen -->
   <div id="game-over">
     <h1>ポイが破れました！</h1>
     <p>最終結果: <span id="final-count">0</span> 匹 / <span id="final-score">0</span> pt</p>
     
-    <div id="submit-form" class="input-group">
-      <input type="text" id="player-name" placeholder="名前を入力" maxlength="10"><br><br>
-      <button class="btn" onclick="submitScore()">スコアを登録して順位を見る</button>
-      <button class="btn" style="background:#747d8c;" onclick="resetGame()">登録せずに再挑戦</button>
+    <!-- 名前登録フォーム -->
+    <div id="form-container">
+      <input type="text" id="player-name" placeholder="名前を入力" maxlength="8">
+      <button id="submit-btn" onclick="submitScore()">登録</button>
     </div>
 
-    <div id="ranking-container">
-      <div id="my-rank-display" class="my-rank"></div>
-
-      <div class="ranking-section">
-        <div class="ranking-title">🏆 掬った数 TOP3</div>
-        <div id="top-count-list" class="ranking-list"></div>
+    <!-- ランキング結果表示 -->
+    <div id="ranking-result">
+      <div class="rank-section">
+        <div class="rank-title">🏆 得点 ランキング (TOP 3)</div>
+        <div id="top-score-list" class="rank-list"></div>
+        <div id="my-score-rank" class="my-rank"></div>
       </div>
-
-      <div class="ranking-section">
-        <div class="ranking-title">⭐ 得点 TOP3</div>
-        <div id="top-score-list" class="ranking-list"></div>
+      <div class="rank-section">
+        <div class="rank-title">🐟 掬った数 ランキング (TOP 3)</div>
+        <div id="top-count-list" class="rank-list"></div>
+        <div id="my-count-rank" class="my-rank"></div>
       </div>
-
-      <button class="btn" style="background:#3742fa;" onclick="resetGame()">もう一度遊ぶ</button>
     </div>
+
+    <button id="restart-btn" onclick="resetGame()">もう一度遊ぶ</button>
   </div>
 
+  <!-- AR Scene -->
   <a-scene 
     mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiError: no; uiScanning: yes;" 
-    color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+    color-space="sRGB" 
+    renderer="colorManagement: true, physicallyCorrectLights" 
+    vr-mode-ui="enabled: false" 
+    device-orientation-permission-ui="enabled: false">
     
     <a-assets>
       <a-asset-item id="fishModelA" src="./goldfish_crucian_carp.glb"></a-asset-item>
@@ -94,12 +137,12 @@
   </a-scene>
 
   <script>
-    // ★ご自身のGASデプロイURLに書き換えてください★
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
+    // ★ここに取得したGoogle Apps Script (GAS)のWebアプリURLを貼り付けてください★
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzpxrfqTYib4fPKU4naGKDna9FmZr2gbL3HeusESJjnsn2njilt7qNggID_I4Jeul9D/exec";
 
     const MAX_FISH = 8;
-    const CATCH_RADIUS = 0.18; 
-    const DURABILITY_DECREASE = 15; 
+    const CATCH_RADIUS = 0.18;
+    const DURABILITY_DECREASE = 15;
     const BOUNDS = 0.45;
 
     let score = 0;
@@ -129,12 +172,8 @@
         if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
         if (isGameOver) return;
 
-        if (!audioCtx) {
-          audioCtx = new AudioContext();
-        }
-
-        // マーカーを認識していない状態でもタップ時のエラーを防ぐ
-        if (!targetEntity || !targetEntity.object3D || !targetEntity.object3D.visible) return;
+        if (!audioCtx) audioCtx = new AudioContext();
+        if (!targetEntity.object3D.visible) return;
 
         handleScreenTap(e.clientX, e.clientY);
       });
@@ -148,22 +187,31 @@
 
       updateUI();
       document.getElementById('game-over').style.display = 'none';
-      document.getElementById('submit-form').style.display = 'block';
-      document.getElementById('ranking-container').style.display = 'none';
+      document.getElementById('form-container').style.display = 'block';
+      document.getElementById('ranking-result').style.display = 'none';
+      document.getElementById('player-name').value = '';
 
-      while (fishContainer.firstChild) fishContainer.removeChild(fishContainer.firstChild);
+      while (fishContainer.firstChild) {
+        fishContainer.removeChild(fishContainer.firstChild);
+      }
       fishes = [];
 
-      for (let i = 0; i < MAX_FISH; i++) spawnFish();
+      for (let i = 0; i < MAX_FISH; i++) {
+        spawnFish();
+      }
     }
 
     function spawnFish() {
       if (fishes.length >= MAX_FISH) return;
 
       const fastCount = fishes.filter(f => f.type === 'FAST').length;
-      let speedConfig = (fastCount >= 1) 
-        ? (Math.random() < 0.5 ? SPEED_TYPES.SLOW : SPEED_TYPES.NORMAL)
-        : (Math.random() < 0.4 ? SPEED_TYPES.SLOW : (Math.random() < 0.8 ? SPEED_TYPES.NORMAL : SPEED_TYPES.FAST));
+      let speedConfig;
+      if (fastCount >= 1) {
+        speedConfig = Math.random() < 0.5 ? SPEED_TYPES.SLOW : SPEED_TYPES.NORMAL;
+      } else {
+        const rand = Math.random();
+        speedConfig = rand < 0.4 ? SPEED_TYPES.SLOW : (rand < 0.8 ? SPEED_TYPES.NORMAL : SPEED_TYPES.FAST);
+      }
 
       const moverEl = document.createElement('a-entity');
       const rotatorEl = document.createElement('a-entity');
@@ -187,16 +235,23 @@
 
       fishContainer.appendChild(moverEl);
 
-      fishes.push({
-        type: speedConfig.type, mover: moverEl, rotator: rotatorEl,
-        speed: speedConfig.speed, scoreValue: speedConfig.score,
-        posX: x, posY: y,
-        targetX: (Math.random() - 0.5) * BOUNDS * 2, targetY: (Math.random() - 0.5) * BOUNDS * 2
-      });
+      const fishData = {
+        type: speedConfig.type,
+        mover: moverEl,
+        rotator: rotatorEl,
+        speed: speedConfig.speed,
+        scoreValue: speedConfig.score,
+        posX: x,
+        posY: y,
+        targetX: (Math.random() - 0.5) * BOUNDS * 2,
+        targetY: (Math.random() - 0.5) * BOUNDS * 2
+      };
+
+      fishes.push(fishData);
     }
 
     function tick() {
-      if (isGameOver || !targetEntity || !targetEntity.object3D || !targetEntity.object3D.visible) {
+      if (isGameOver || !targetEntity.object3D.visible) {
         requestAnimationFrame(tick);
         return;
       }
@@ -213,7 +268,9 @@
           fish.posX += (dx / dist) * fish.speed;
           fish.posY += (dy / dist) * fish.speed;
 
-          const angleDeg = Math.atan2(dx, dy) * (180 / Math.PI);
+          const angleRad = Math.atan2(dx, dy);
+          const angleDeg = angleRad * (180 / Math.PI);
+
           fish.mover.setAttribute('position', `${fish.posX} ${fish.posY} 0.01`);
           fish.rotator.setAttribute('rotation', `0 0 ${-angleDeg + 180}`);
         }
@@ -241,6 +298,7 @@
       if (intersects.length > 0) {
         const worldPoint = intersects[0].point;
         const localPoint = targetEntity.object3D.worldToLocal(worldPoint.clone());
+
         const tapX = localPoint.x;
         const tapY = localPoint.y;
 
@@ -282,6 +340,65 @@
       updateUI();
     }
 
+    // --- ランキングスコア送信機能 ---
+    async function submitScore() {
+      const nameInput = document.getElementById('player-name').value.trim();
+      if (!nameInput) {
+        alert('名前を入力してください');
+        return;
+      }
+
+      if (GAS_API_URL === "YOUR_GAS_WEB_APP_URL_HERE") {
+        alert('GASのURLが設定されていません。コード内の GAS_API_URL を書き換えてください。');
+        return;
+      }
+
+      const submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.innerText = '送信中...';
+
+      try {
+        const response = await fetch(GAS_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            name: nameInput,
+            count: caughtCount,
+            score: score
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+          // 登録フォームを非表示にしてランキングを表示
+          document.getElementById('form-container').style.display = 'none';
+          document.getElementById('ranking-result').style.display = 'block';
+
+          // 得点上位3名を表示
+          const topScoreEl = document.getElementById('top-score-list');
+          topScoreEl.innerHTML = result.topScore.map((r, i) => `${i + 1}位: ${r.name} (${r.val} pt)`).join('<br>');
+
+          // 匹数上位3名を表示
+          const topCountEl = document.getElementById('top-count-list');
+          topCountEl.innerHTML = result.topCount.map((r, i) => `${i + 1}位: ${r.name} (${r.val} 匹)`).join('<br>');
+
+          // 自分の順位を表示
+          document.getElementById('my-score-rank').innerText = `あなたの順位: ${result.myRank.scoreRank}位`;
+          document.getElementById('my-count-rank').innerText = `あなたの順位: ${result.myRank.countRank}位`;
+        } else {
+          alert('送信エラー: ' + result.message);
+        }
+      } catch (err) {
+        alert('通信エラーが発生しました');
+        console.error(err);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = '登録';
+      }
+    }
+
+    // --- エフェクト処理 ---
     function playSplashSound() {
       if (!audioCtx) return;
       if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -309,8 +426,10 @@
       ring.setAttribute('radius-inner', '0.01');
       ring.setAttribute('radius-outer', '0.03');
       ring.setAttribute('material', 'color: #718093; opacity: 0.8; transparent: true');
+
       ring.setAttribute('animation__scale', { property: 'scale', to: '3 3 3', dur: 500, easing: 'easeOutQuad' });
       ring.setAttribute('animation__fade', { property: 'material.opacity', to: '0', dur: 500, easing: 'easeOutQuad' });
+
       effectContainer.appendChild(ring);
       setTimeout(() => { ring.remove(); }, 500);
     }
@@ -322,8 +441,10 @@
       textEl.setAttribute('align', 'center');
       textEl.setAttribute('color', '#fbc531');
       textEl.setAttribute('scale', '0.4 0.4 0.4');
+
       textEl.setAttribute('animation__move', { property: 'position', to: `${x} ${y + 0.15} 0.2`, dur: 800, easing: 'easeOutCubic' });
       textEl.setAttribute('animation__fade', { property: 'material.opacity', to: '0', dur: 800, easing: 'easeInCubic' });
+
       effectContainer.appendChild(textEl);
       setTimeout(() => { textEl.remove(); }, 800);
     }
@@ -338,47 +459,6 @@
       document.getElementById('final-count').innerText = caughtCount;
       document.getElementById('final-score').innerText = score;
       document.getElementById('game-over').style.display = 'flex';
-    }
-
-    async function submitScore() {
-      const nameInput = document.getElementById('player-name').value.trim() || "名無し";
-      
-      document.getElementById('submit-form').style.display = 'none';
-
-      try {
-        const response = await fetch(GAS_WEB_APP_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({
-            name: nameInput,
-            count: caughtCount,
-            score: score
-          })
-        });
-
-        const data = await response.json();
-
-        document.getElementById('my-rank-display').innerHTML = 
-          `あなたの順位<br>すくった数: <b>${data.myRank.countRank}</b> 位 / 得点: <b>${data.myRank.scoreRank}</b> 位`;
-
-        let countHtml = "";
-        data.topCount.forEach((item, index) => {
-          countHtml += `${index + 1}位: ${item.name} - ${item.count}匹 (${item.score}pt)<br>`;
-        });
-        document.getElementById('top-count-list').innerHTML = countHtml;
-
-        let scoreHtml = "";
-        data.topScore.forEach((item, index) => {
-          scoreHtml += `${index + 1}位: ${item.name} - ${item.score}pt (${item.count}匹)<br>`;
-        });
-        document.getElementById('top-score-list').innerHTML = scoreHtml;
-
-        document.getElementById('ranking-container').style.display = 'block';
-
-      } catch (err) {
-        alert("送信エラーが発生しました。GASのURL設定または権限を確認してください。");
-        document.getElementById('submit-form').style.display = 'block';
-      }
     }
 
     function resetGame() {
