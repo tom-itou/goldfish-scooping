@@ -385,8 +385,8 @@
           topCountEl.innerHTML = result.topCount.map((r, i) => `${i + 1}位: ${r.name} (${r.val} 匹)`).join('<br>');
 
           // 自分の順位を表示
-          document.getElementById('my-score-rank').innerText = `あなたの順位: ${result.myRank.scoreRank}位`;
-          document.getElementById('my-count-rank').innerText = `あなたの順位: ${result.myRank.countRank}位`;
+          document.getElementById('my-score-rank').innerText = `あなたの順位: ${result.totalPlayers}人中 ${result.myRank.scoreRank}位`;
+          document.getElementById('my-count-rank').innerText = `あなたの順位: ${result.totalPlayers}人中 ${result.myRank.countRank}位`;
         } else {
           alert('送信エラー: ' + result.message);
         }
